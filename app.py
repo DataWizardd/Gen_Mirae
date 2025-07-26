@@ -140,17 +140,22 @@ with st.sidebar:
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
-# 이전 메시지 렌더링
+# 1. 항상 히스토리 먼저 렌더링
 for msg in st.session_state["messages"]:
-    st.chat_message(msg["role"]).write(msg["content"])
+    if msg["role"] == "user":
+        st.chat_message("user").write(msg["content"])
+    elif msg["role"] == "assistant":
+        if msg.get("tradingview_html"):
+            components.html(msg["tradingview_html"], height=450)
+        st.chat_message("assistant").write(msg["content"])
+        with st.expander("🤔 사용된 에이전트 유형", expanded=False):
+            st.markdown(f"**선택된 에이전트:** {msg.get('agent_type','-')}")
 
-# 사용자 입력
+# 2. 사용자 입력 처리 (입력 시에만 메시지 추가)
 if user_input := st.chat_input("메시지를 입력하세요..."):
+    st.session_state["messages"].append({"role": "user", "content": user_input})
+    st.chat_message("user").write(user_input)  # 사용자 질문을 즉시 채팅창에 출력
     with st.spinner("답변 생성 중..."):
         answer, tradingview_html, agent_type = orchestrator.route(user_input, st.session_state["user_stocks"], db_params)
-    if tradingview_html:
-        components.html(tradingview_html, height=450)
-    with st.expander("🤔 사용된 에이전트 유형/경로", expanded=False):
-        st.markdown(f"**선택된 에이전트:** {agent_type}")
-    st.chat_message("assistant").write(answer)
-    st.session_state["messages"].append({"role":"assistant","content":answer})
+    st.session_state["messages"].append({"role": "assistant", "content": answer, "agent_type": agent_type, "tradingview_html": tradingview_html})
+    st.experimental_rerun()
