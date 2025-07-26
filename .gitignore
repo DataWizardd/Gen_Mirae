@@ -1,0 +1,24 @@
+cat <<EOF > .gitignore
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# 환경설정
+.env
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VSCode 등 에디터
+.vscode/
+*.code-workspace
+
+# 빌드/배포 아티팩트
+dist/
+build/
+*.egg-info/
+EOF
+.env
