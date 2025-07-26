@@ -1,0 +1,6 @@
+streamlit
+psycopg2-binary
+sentence-transformers
+python-dotenv
+pandas
+requests
