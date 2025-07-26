@@ -53,13 +53,41 @@ class Orchestrator:
 
     def route(self, user_input, user_stocks, db_params):
         today = datetime.now().strftime("%Y-%m-%d")
-        # 에이전트 선택
+        tradingview_html = None
+        agent_type = None
+        # 에이전트 선택 및 TradingView 위젯 생성
         if re.search(r"(주가|가격)", user_input):
             context = self.sa.run(user_input, user_stocks, db_params) or ""
+            agent_type = "정형(Structured) 에이전트"
+            mapping = {"애플":"AAPL","엔비디아":"NVDA","마이크로소프트":"MSFT","아마존":"AMZN","알파벳":"GOOGL"}
+            symbol = next((sym for kor,sym in mapping.items() if kor in user_input), None)
+            if symbol:
+                tradingview_html = f'''
+                <div class="tradingview-widget-container">
+                  <div id="tv_{symbol}"></div>
+                  <script src="https://s3.tradingview.com/tv.js"></script>
+                  <script>
+                  new TradingView.widget({{
+                    "width": "100%",
+                    "height": 400,
+                    "symbol": "NASDAQ:{symbol}",
+                    "interval": "D",
+                    "timezone": "Etc/UTC",
+                    "theme": "dark",
+                    "style": "1",
+                    "locale": "kr",
+                    "toolbar_bg": "#2b2b2b",
+                    "container_id": "tv_{symbol}"
+                  }});
+                  </script>
+                </div>
+                '''
         elif re.search(r"(검색|뉴스|기사|웹)", user_input):
             context = self.wa.run(user_input, user_stocks, db_params)
+            agent_type = "웹(Web) 에이전트"
         else:
             context = self.ua.run(user_input, user_stocks, db_params)
+            agent_type = "비정형(Unstructured) 에이전트"
 
         system_msg = f"오늘 날짜는 {today}입니다. 아래 정보를 참고하여 **한국어**로만 답변해 주세요."
         human_msg  = f"[컨텍스트]\n{context}\n\n[질문]\n{user_input}"
@@ -68,4 +96,4 @@ class Orchestrator:
             ("system", system_msg),
             ("human", human_msg)
         ])
-        return ai_msg.content 
+        return ai_msg.content, tradingview_html, agent_type 

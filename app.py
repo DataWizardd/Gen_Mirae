@@ -146,60 +146,11 @@ for msg in st.session_state["messages"]:
 
 # 사용자 입력
 if user_input := st.chat_input("메시지를 입력하세요..."):
-
-    # 1) 주가 질의 감지
-    kor2sym = {"애플":"AAPL","엔비디아":"NVDA","마이크로소프트":"MSFT",
-               "아마존":"AMZN","알파벳":"GOOGL"}
-    symbol = next((v for k,v in kor2sym.items() if k in user_input), None)
-
-    if symbol:
-        # TradingView 다크 모드 위젯
-        widget_html = f"""
-        <div class="tradingview-widget-container">
-          <div id="tv_{symbol}"></div>
-          <script src="https://s3.tradingview.com/tv.js"></script>
-          <script>
-          new TradingView.widget({{
-            "width": "100%",
-            "height": 400,
-            "symbol": "NASDAQ:{symbol}",
-            "interval": "D",
-            "timezone": "Etc/UTC",
-            "theme": "dark",
-            "style": "1",
-            "locale": "kr",
-            "toolbar_bg": "#2b2b2b",
-            "container_id": "tv_{symbol}"
-          }});
-          </script>
-        </div>
-        """
-        components.html(widget_html, height=450)
-
-        # DB에서 현재가 조회
-        conn = psycopg2.connect(**db_params)
-        cur  = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute(
-            "SELECT close FROM stock_price WHERE symbol=%s ORDER BY time DESC LIMIT 1",
-            (symbol,)
-        )
-        row = cur.fetchone()
-        conn.close()
-        current = row["close"] if row else None
-
-        # 차트 하단에 현재가
-        st.markdown(f"**현재 {symbol} 주가:** `{current:.2f}` USD")
-
-        # 2) LLM 최종 답변 호출
-        answer = orchestrator.route(user_input, st.session_state["user_stocks"], db_params)
-        st.chat_message("assistant").write(answer)
-        st.session_state["messages"].append({"role":"assistant","content":answer})
-
-    else:
-        # 일반 RAG 대화 흐름
-        st.session_state["messages"].append({"role":"user","content":user_input})
-        st.chat_message("user").write(user_input)
-        with st.spinner("응답 생성 중…"):
-            raw = orchestrator.route(user_input, st.session_state["user_stocks"], db_params)
-        st.chat_message("assistant").write(raw)
-        st.session_state["messages"].append({"role":"assistant","content":raw})
+    with st.spinner("답변 생성 중..."):
+        answer, tradingview_html, agent_type = orchestrator.route(user_input, st.session_state["user_stocks"], db_params)
+    if tradingview_html:
+        components.html(tradingview_html, height=450)
+    with st.expander("🤔 사용된 에이전트 유형/경로", expanded=False):
+        st.markdown(f"**선택된 에이전트:** {agent_type}")
+    st.chat_message("assistant").write(answer)
+    st.session_state["messages"].append({"role":"assistant","content":answer})
