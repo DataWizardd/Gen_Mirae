@@ -65,7 +65,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("📊 나만의 맞춤형 AI 애널리스트 에이전트 (다크 모드)")
+st.title("📊 나만의 맞춤형 AI 애널리스트 에이전트")
 
 # ------------------------------------------------------------------------------
 # LLM & Tool
@@ -165,13 +165,17 @@ orchestrator = Orchestrator(sa, ua, wa, llm)
 with st.sidebar:
     st.header("📈 보유 주식 현황")
     if "user_stocks" not in st.session_state:
-        # 예시 종목
+        # 5개 종목 모두 추가
         st.session_state["user_stocks"] = [
             {"종목명":"Apple Inc.","티커":"AAPL","수량":5,"평균단가":150},
             {"종목명":"Nvidia Corp.","티커":"NVDA","수량":3,"평균단가":200},
+            {"종목명":"Microsoft Corp.","티커":"MSFT","수량":10,"평균단가":300},
+            {"종목명":"Amazon.com, Inc.","티커":"AMZN","수량":2,"평균단가":100},
+            {"종목명":"Alphabet Inc.","티커":"GOOGL","수량":4,"평균단가":140},
         ]
     stocks = st.session_state["user_stocks"]
 
+    # 매번 DB에서 조회
     conn = psycopg2.connect(**db_params)
     cur  = conn.cursor(cursor_factory=RealDictCursor)
     sidebar_data = []
@@ -180,16 +184,19 @@ with st.sidebar:
             "SELECT close FROM stock_price WHERE symbol=%s ORDER BY time DESC LIMIT 1",
             (s["티커"],)
         )
-        row = cur.fetchone()
+        row   = cur.fetchone()
         price = row["close"] if row else None
         sidebar_data.append({
-            "종목명": s["종목명"],
-            "티커":   s["티커"],
-            "수량":   s["수량"],
-            "현재가": f"{price:,}" if price else "-",
-            "평균단가": f"{s['평균단가']:,}"
+            "종목명":   s["종목명"],
+            "티커":     s["티커"],
+            "수량":     s["수량"],
+            "평균단가": f"{s['평균단가']:,}",
+            "현재가":   f"{price:,.2f}" if price is not None else "-",
+            "평가액":   f"{price * s['수량']:,.2f}" if price is not None else "-",
+            "수익률":   f"{(price - s['평균단가'])/s['평균단가']*100:.2f}%" if price is not None else "-",
         })
     conn.close()
+
     st.table(pd.DataFrame(sidebar_data))
 
 # ------------------------------------------------------------------------------
