@@ -21,4 +21,7 @@ dist/
 build/
 *.egg-info/
 EOF
+<<<<<<< HEAD
 .env
+=======
+>>>>>>> 99712134b0cc7a2f931d1417b0ee7c63426e5b12
