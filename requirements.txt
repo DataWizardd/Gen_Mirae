@@ -8,3 +8,4 @@ requests
 langchain-naver
 langchain
 langchain-community
+gunicorn
