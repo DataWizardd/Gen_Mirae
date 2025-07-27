@@ -1,13 +1,19 @@
 #!/bin/bash
 
-# Heroku의 캐시 폴더와 AI 모델 캐시 폴더를 강제로 삭제
-echo "Post-compile: Clearing model caches to reduce slug size..."
-rm -rf /app/.cache/torch
-rm -rf /app/.cache/huggingface
-rm -rf /app/.cache/sentence_transformers
+echo "--- [START] Executing post_compile hook ---"
 
-# 홈 디렉토리의 캐시도 삭제
-rm -rf /app/.cache
-rm -rf ~/.cache
+CACHE_DIR="/app/.cache"
 
-echo "Cache clearing complete." 
+if [ -d "$CACHE_DIR" ]; then
+  echo "SUCCESS: Found cache directory at $CACHE_DIR"
+  echo "Listing contents before deletion:"
+  ls -lah "$CACHE_DIR"
+  
+  echo "Now, deleting cache directory to reduce slug size..."
+  rm -rf "$CACHE_DIR"
+  echo "SUCCESS: Deletion complete."
+else
+  echo "WARNING: Cache directory $CACHE_DIR was not found."
+fi
+
+echo "--- [END] Finished post_compile hook ---" 
