@@ -40,33 +40,125 @@ os.environ["OPENAI_API_KEY"]  = OPENAI_API_KEY
 os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
 st.set_page_config(page_title="나만의 AI 애널리스트", layout="wide")
-st.markdown(
-    """
-    <style>
-      /* 전체 배경 및 텍스트 다크 모드 */
-      body, .stApp, .block-container {
-        background-color: #121212 !important;
-        color: #e0e0e0 !important;
-      }
-      /* TradingView 컨테이너 덮어쓰기 */
-      .tradingview-widget-container {
-        background-color: #121212 !important;
-        border: none !important;
-      }
-      /* 사이드바 배경 */
-      [data-testid="stSidebar"] {
-        background-color: #1e1e1e !important;
-      }
-      /* 채팅 박스 배경 */
-      .stChatMessage {
-        background-color: #1e1e1e !important;
-      }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
-st.title("📊 나만의 맞춤형 AI 애널리스트 에이전트")
+# 디자이너 CSS 스타일 적용
+st.markdown("""
+<style>
+:root {
+  --font-size: 14px;
+  --background: #ffffff;
+  --foreground: oklch(0.145 0 0);
+  --card: #ffffff;
+  --card-foreground: oklch(0.145 0 0);
+  --primary: #030213;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+}
+
+/* 다크모드 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.145 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.985 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --border: oklch(0.269 0 0);
+    --input: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+  }
+}
+
+/* 전체 배경 및 텍스트 */
+body, .stApp, .block-container {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* 카드 스타일 */
+.stCard {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 1rem !important;
+}
+
+/* 채팅 메시지 스타일 */
+.stChatMessage {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* 입력 필드 스타일 */
+.stTextInput > div > div > input {
+  background-color: var(--input-background) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* 탭 스타일 */
+.stTabs [data-baseweb="tab-list"] {
+  background-color: var(--card) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+  color: var(--foreground) !important;
+}
+
+.stTabs [aria-selected="true"] {
+  color: var(--primary) !important;
+  border-bottom: 2px solid var(--primary) !important;
+}
+
+/* 사이드바 스타일 */
+[data-testid="stSidebar"] {
+  background-color: var(--sidebar) !important;
+  color: var(--sidebar-foreground) !important;
+}
+
+/* TradingView 컨테이너 */
+.tradingview-widget-container {
+  background-color: var(--card) !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.title("📊 나만의 맞춤형 AI 애널리스트")
+
+# 반드시 가장 먼저 user_stocks 초기화
+if "user_stocks" not in st.session_state:
+    st.session_state["user_stocks"] = [
+        {"종목명":"Apple Inc.","티커":"AAPL","수량":5,"평균단가":150},
+        {"종목명":"Nvidia Corp.","티커":"NVDA","수량":3,"평균단가":200},
+        {"종목명":"Microsoft Corp.","티커":"MSFT","수량":10,"평균단가":300},
+        {"종목명":"Amazon.com, Inc.","티커":"AMZN","수량":2,"평균단가":100},
+        {"종목명":"Alphabet Inc.","티커":"GOOGL","수량":4,"평균단가":140},
+    ]
 
 # ------------------------------------------------------------------------------
 # LLM & Tool
@@ -80,10 +172,6 @@ llm = ChatClovaX(
 )
 search_tool = TavilySearchResults(api_key=TAVILY_API_KEY, max_results=5)
 
-# ------------------------------------------------------------------------------
-# 에이전트 정의 (생략된 부분은 이전 예시와 동일)
-# ------------------------------------------------------------------------------
-
 # 인스턴스 생성
 db_params = {
     "dbname": PG_NAME, "user": PG_USER, "password": PG_PASSWORD,
@@ -95,67 +183,163 @@ wa = WebAgent(search_tool)
 orchestrator = Orchestrator(sa, ua, wa, llm)
 
 # ------------------------------------------------------------------------------
-# 사이드바: 보유 주식 최신가
+# 탭 기반 레이아웃
 # ------------------------------------------------------------------------------
-with st.sidebar:
-    st.header("📈 보유 주식 현황")
-    if "user_stocks" not in st.session_state:
-        # 5개 종목 모두 추가
-        st.session_state["user_stocks"] = [
-            {"종목명":"Apple Inc.","티커":"AAPL","수량":5,"평균단가":150},
-            {"종목명":"Nvidia Corp.","티커":"NVDA","수량":3,"평균단가":200},
-            {"종목명":"Microsoft Corp.","티커":"MSFT","수량":10,"평균단가":300},
-            {"종목명":"Amazon.com, Inc.","티커":"AMZN","수량":2,"평균단가":100},
-            {"종목명":"Alphabet Inc.","티커":"GOOGL","수량":4,"평균단가":140},
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Dashboard", "💼 Portfolio", "📈 Journey", "🤖 AI Chat"])
+
+with tab1:
+    st.header("대시보드")
+    
+    # AgentNotifications (알림 섹션)
+    with st.container():
+        st.subheader("🔔 오늘의 알림")
+        st.info("엔비디아(NVDA)가 전일 대비 8.2% 상승했습니다. AI 칩 수요 증가로 긍정적인 전망이 나오고 있습니다.")
+    
+    # PerformanceSummary (성과 요약)
+    with st.container():
+        st.subheader("📈 포트폴리오 성과 요약")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("총 자산", "$12,450", "+6.07%")
+        with col2:
+            st.metric("일간 수익", "+$712", "+2.1%")
+        with col3:
+            st.metric("월간 수익", "+$1,234", "+4.3%")
+        with col4:
+            st.metric("연간 수익", "+$2,890", "+12.5%")
+
+with tab2:
+    st.header("포트폴리오")
+    
+    # PortfolioChart (포트폴리오 차트)
+    with st.container():
+        st.subheader("📊 포트폴리오 차트")
+        # TradingView 차트 예시
+        chart_html = """
+        <div class="tradingview-widget-container">
+          <div id="tv_portfolio"></div>
+          <script src="https://s3.tradingview.com/tv.js"></script>
+          <script>
+          new TradingView.widget({
+            "width": "100%",
+            "height": 400,
+            "symbol": "NASDAQ:AAPL",
+            "interval": "D",
+            "timezone": "Etc/UTC",
+            "theme": "light",
+            "style": "1",
+            "locale": "kr",
+            "toolbar_bg": "#f1f3f6",
+            "container_id": "tv_portfolio"
+          });
+          </script>
+        </div>
+        """
+        components.html(chart_html, height=450)
+    
+    # AssetSummaryCards (자산 요약 카드)
+    with st.container():
+        st.subheader("💼 자산 요약")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            with st.container():
+                st.markdown("""
+                <div style="background-color: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem;">
+                    <h4>📈 해외 주식</h4>
+                    <p style="font-size: 24px; font-weight: bold; color: #10b981;">$5,450</p>
+                    <p style="color: var(--muted-foreground);">+6.71% (이번 달)</p>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col2:
+            with st.container():
+                st.markdown("""
+                <div style="background-color: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem;">
+                    <h4>🇰🇷 국내 주식</h4>
+                    <p style="font-size: 24px; font-weight: bold; color: #10b981;">$5,450</p>
+                    <p style="color: var(--muted-foreground);">+5.43% (이번 달)</p>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            with st.container():
+                st.markdown("""
+                <div style="background-color: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem;">
+                    <h4>💰 현금</h4>
+                    <p style="font-size: 24px; font-weight: bold; color: var(--foreground);">$1,550</p>
+                    <p style="color: var(--muted-foreground);">12.5% 비중</p>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col4:
+            with st.container():
+                st.markdown("""
+                <div style="background-color: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem;">
+                    <h4>📊 전체</h4>
+                    <p style="font-size: 24px; font-weight: bold; color: #10b981;">$12,450</p>
+                    <p style="color: var(--muted-foreground);">+6.07% (총 수익률)</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+with tab3:
+    st.header("투자 여정")
+    
+    # InvestmentJourney (투자 여정)
+    with st.container():
+        st.subheader("🚀 투자 여정")
+        
+        # 타임라인 형태로 투자 히스토리 표시
+        timeline_data = [
+            {"date": "2024-01-15", "action": "첫 투자 시작", "amount": "$5,000", "description": "애플, 엔비디아 첫 매수"},
+            {"date": "2024-03-20", "action": "포트폴리오 확장", "amount": "$3,000", "description": "마이크로소프트, 아마존 추가"},
+            {"date": "2024-06-10", "action": "리밸런싱", "amount": "$2,000", "description": "알파벳 추가, 비중 조정"},
+            {"date": "2024-09-05", "action": "수익 실현", "amount": "$1,500", "description": "일부 수익 실현 및 현금 보유"},
         ]
-    stocks = st.session_state["user_stocks"]
+        
+        for i, item in enumerate(timeline_data):
+            with st.container():
+                col1, col2 = st.columns([1, 4])
+                with col1:
+                    st.markdown(f"""
+                    <div style="text-align: center; padding: 0.5rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                            {i+1}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f"""
+                    <div style="background-color: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;">
+                        <h4>{item['action']}</h4>
+                        <p style="color: var(--muted-foreground);">{item['date']} • {item['amount']}</p>
+                        <p>{item['description']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-    # 매번 DB에서 조회
-    conn = psycopg2.connect(**db_params)
-    cur  = conn.cursor(cursor_factory=RealDictCursor)
-    sidebar_data = []
-    for s in stocks:
-        cur.execute(
-            "SELECT close FROM stock_price WHERE symbol=%s ORDER BY time DESC LIMIT 1",
-            (s["티커"],)
-        )
-        row   = cur.fetchone()
-        price = row["close"] if row else None
-        sidebar_data.append({
-            "종목명":   s["종목명"],
-            "티커":     s["티커"],
-            "수량":     s["수량"],
-            "평균단가": f"{s['평균단가']:,}",
-            "현재가":   f"{price:,.2f}" if price is not None else "-",
-            "평가액":   f"{price * s['수량']:,.2f}" if price is not None else "-",
-            "수익률":   f"{(price - s['평균단가'])/s['평균단가']*100:.2f}%" if price is not None else "-",
-        })
-    conn.close()
+with tab4:
+    st.header("AI 애널리스트")
+    # 기존 LLM 채팅 기능
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
 
-    st.table(pd.DataFrame(sidebar_data))
+    # 1. 항상 히스토리 먼저 렌더링
+    for msg in st.session_state["messages"]:
+        if msg["role"] == "user":
+            st.chat_message("user").write(msg["content"])
+        elif msg["role"] == "assistant":
+            if msg.get("tradingview_html"):
+                components.html(msg["tradingview_html"], height=450)
+            st.chat_message("assistant").write(msg["content"])
+            with st.expander("🤔 사용된 에이전트 유형", expanded=False):
+                st.markdown(f"**선택된 에이전트:** {msg.get('agent_type','-')}")
 
-# ------------------------------------------------------------------------------
-# 메인: 채팅 + 차트 + LLM 답변
-# ------------------------------------------------------------------------------
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []
-
-# 1. 항상 히스토리 먼저 렌더링
-for msg in st.session_state["messages"]:
-    if msg["role"] == "user":
-        st.chat_message("user").write(msg["content"])
-    elif msg["role"] == "assistant":
-        if msg.get("tradingview_html"):
-            components.html(msg["tradingview_html"], height=450)
-        st.chat_message("assistant").write(msg["content"])
-        with st.expander("🤔 사용된 에이전트 유형", expanded=False):
-            st.markdown(f"**선택된 에이전트:** {msg.get('agent_type','-')}")
-
-# 2. 사용자 입력 처리 (입력 시에만 메시지 추가)
-if user_input := st.chat_input("메시지를 입력하세요..."):
-    st.session_state["messages"].append({"role": "user", "content": user_input})
-    st.chat_message("user").write(user_input)  # 사용자 질문을 즉시 채팅창에 출력
-    with st.spinner("답변 생성 중..."):
-        answer, tradingview_html, agent_type = orchestrator.route(user_input, st.session_state["user_stocks"], db_params)
-    st.session_state["messages"].append({"role": "assistant", "content": answer, "agent_type": agent_type, "tradingview_html": tradingview_html})
-    st.experimental_rerun()
+    # 2. 사용자 입력 처리 (입력 시에만 메시지 추가)
+    if user_input := st.chat_input("메시지를 입력하세요..."):
+        st.session_state["messages"].append({"role": "user", "content": user_input})
+        st.chat_message("user").write(user_input)  # 사용자 질문을 즉시 채팅창에 출력
+        with st.spinner("답변 생성 중..."):
+            answer, tradingview_html, agent_type = orchestrator.route(user_input, st.session_state["user_stocks"], db_params)
+        st.session_state["messages"].append({"role": "assistant", "content": answer, "agent_type": agent_type, "tradingview_html": tradingview_html})
+        st.experimental_rerun()

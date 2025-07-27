@@ -96,4 +96,4 @@ class Orchestrator:
             ("system", system_msg),
             ("human", human_msg)
         ])
-        return ai_msg.content, tradingview_html, agent_type 
+        return ai_msg.content, tradingview_html, agent_type

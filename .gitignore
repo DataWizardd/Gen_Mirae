@@ -1,24 +1,29 @@
-cat <<EOF > .gitignore
-# Python
+﻿# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *.sqlite3
 
-# 환경설정
+# Environment variables
 .env
-.venv/
+.venv
 venv/
+env/
+ENV/
 
-# Jupyter
-.ipynb_checkpoints/
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
 
-# VSCode 등 에디터
+# VS Code
 .vscode/
 *.code-workspace
 
-# 빌드/배포 아티팩트
+# Build/dist artifacts
 dist/
 build/
 *.egg-info/
-EOF
-.env
+
+# Node dependencies
+node_modules/
+
+# IDE files
+.idea/
