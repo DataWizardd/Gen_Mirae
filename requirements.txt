@@ -5,3 +5,6 @@ sentence-transformers
 python-dotenv
 pandas
 requests
+langchain-naver
+langchain
+langchain-community

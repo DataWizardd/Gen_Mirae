@@ -38,7 +38,7 @@ export function NotificationSettingsModal({ isOpen, onOpenChange }: Notification
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[30vw] max-w-[70px] p-3">
+      <DialogContent className="w-[15vw] max-w-[35px] p-3">
         <DialogHeader>
           <DialogTitle className="text-sm">알림 설정</DialogTitle>
           <DialogDescription className="text-xs">
