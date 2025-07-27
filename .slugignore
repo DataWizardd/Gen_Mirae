@@ -1,0 +1,24 @@
+# Python Caches
+__pycache__/
+*.py[cod]
+
+# Local Caches
+.cache/
+.env
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# Build artifacts
+/build/
+/public/
+
+# Git
+.git/
+.gitignore
+
+# Notebooks and Reports (if not needed in production)
+/notebook/
+/report/
+*.pdf 
