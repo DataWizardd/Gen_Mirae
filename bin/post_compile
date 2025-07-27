@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Heroku의 캐시 폴더와 AI 모델 캐시 폴더를 강제로 삭제
+echo "Post-compile: Clearing model caches to reduce slug size..."
+rm -rf /app/.cache/torch
+rm -rf /app/.cache/huggingface
+rm -rf /app/.cache/sentence_transformers
+
+# 홈 디렉토리의 캐시도 삭제
+rm -rf /app/.cache
+rm -rf ~/.cache
+
+echo "Cache clearing complete." 
