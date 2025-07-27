@@ -2,9 +2,12 @@
 __pycache__/
 *.py[cod]
 
-# Local Caches
+# Local/System Caches
 .cache/
 .env
+/app/.cache/torch/
+/app/.cache/huggingface/
+/app/.cache/sentence_transformers/
 
 # Node.js
 node_modules/
