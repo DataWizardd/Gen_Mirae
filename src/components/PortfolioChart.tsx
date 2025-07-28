@@ -2,26 +2,20 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { useTheme } from './ui/use-theme';
 import { useMobile } from './ui/use-mobile';
 
-interface PortfolioData {
+export interface PortfolioData {
   name: string;
   value: number;
   color: string;
 }
 
-const portfolioData: PortfolioData[] = [
-  { name: '국내 주식', value: 0, color: '#2563eb' },
-  { name: '해외 주식', value: 35000000, color: '#dc2626' },
-  { name: '현금', value: 10000000, color: '#16a34a' },
-];
-
 const formatCurrency = (value: number) => {
   return `${(value / 10000).toLocaleString()}만원`;
 };
 
-export function PortfolioChart() {
+export function PortfolioChart({ data }: { data: PortfolioData[] }) {
   const { theme } = useTheme();
   const isMobile = useMobile();
-  const total = portfolioData.reduce((sum, item) => sum + item.value, 0);
+  const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="bg-card rounded-lg p-4 shadow-sm border">
@@ -29,7 +23,7 @@ export function PortfolioChart() {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={portfolioData}
+              data={data}
               cx="50%"
               cy="50%"
               innerRadius={isMobile ? 40 : 60}
@@ -37,7 +31,7 @@ export function PortfolioChart() {
               paddingAngle={5}
               dataKey="value"
             >
-              {portfolioData.map((entry, index) => (
+              {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
@@ -73,7 +67,7 @@ export function PortfolioChart() {
       {/* 모바일에서는 범례를 차트 아래에 표시 */}
       {isMobile && (
         <div className="mt-4 space-y-2">
-          {portfolioData.map((item) => (
+          {data.map((item) => (
             <div key={item.name} className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 <div 

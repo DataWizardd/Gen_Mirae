@@ -2,7 +2,7 @@ import { Card } from './ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 // import { useMobile } from './ui/use-mobile';
 
-interface AssetData {
+export interface AssetData {
   name: string;
   value: number;
   change: number;
@@ -10,40 +10,20 @@ interface AssetData {
   color: string;
 }
 
-const assetData: AssetData[] = [
-  {
-    name: '국내 주식',
-    value: 0,
-    change: 0,
-    changePercent: 0,
-    color: '#2563eb'
-  },
-  {
-    name: '해외 주식',
-    value: 35000000,
-    change: 2200000,
-    changePercent: 6.71,
-    color: '#dc2626'
-  },
-  {
-    name: '현금',
-    value: 10000000,
-    change: 0,
-    changePercent: 0,
-    color: '#16a34a'
+const formatCurrency = (value: number, assetName: string) => {
+  if (assetName === '국내 주식' || assetName === '현금') {
+    if (value === 0 && assetName === '국내 주식') return '0원';
+    return `${(value / 10000).toLocaleString('ko-KR')}만원`;
   }
-];
-
-const formatCurrency = (value: number) => {
-  return `${(value / 10000).toLocaleString()}만원`;
+  return `$${(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export function AssetSummaryCards() {
+export function AssetSummaryCards({ data }: { data: AssetData[] }) {
   // const isMobile = useMobile();
 
   return (
     <div className="grid grid-cols-3 gap-3">
-      {assetData.map((asset) => (
+      {data.map((asset) => (
         <Card key={asset.name} className="p-3">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-xs font-medium">{asset.name}</h4>
@@ -54,18 +34,18 @@ export function AssetSummaryCards() {
           </div>
           <div className="space-y-2">
             <p className="text-sm font-medium">
-              {formatCurrency(asset.value)}
+              {formatCurrency(asset.value, asset.name)}
             </p>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-start space-x-1">
               {asset.change > 0 ? (
-                <TrendingUp className="w-3 h-3 text-green-600" />
+                <TrendingUp className="w-3 h-3 text-green-600 mt-0.5" />
               ) : asset.change < 0 ? (
-                <TrendingDown className="w-3 h-3 text-red-600" />
+                <TrendingDown className="w-3 h-3 text-red-600 mt-0.5" />
               ) : (
                 <div className="w-3 h-3" />
               )}
-              <span 
-                className={`text-xs ${
+              <div
+                className={`text-xs leading-tight ${
                   asset.change > 0 
                     ? 'text-green-600' 
                     : asset.change < 0 
@@ -73,9 +53,13 @@ export function AssetSummaryCards() {
                     : 'text-muted-foreground'
                 }`}
               >
-                {asset.change > 0 ? '+' : ''}{formatCurrency(asset.change)} 
-                ({asset.changePercent > 0 ? '+' : ''}{asset.changePercent}%)
-              </span>
+                <div>
+                  {asset.change > 0 ? '+' : ''}{formatCurrency(asset.change, asset.name)}
+                </div>
+                <div>
+                  ({asset.changePercent > 0 ? '+' : ''}{asset.changePercent.toFixed(2)}%)
+                </div>
+              </div>
             </div>
           </div>
         </Card>

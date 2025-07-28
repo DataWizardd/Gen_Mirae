@@ -1,25 +1,85 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-// import { ScrollArea } from './ui/scroll-area';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
+
+const TradingViewWidget = memo(({ htmlContent }: { htmlContent: string }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !htmlContent) return;
+
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+    
+    const template = document.createElement('template');
+    template.innerHTML = htmlContent.trim();
+    const content = template.content;
+
+    const scriptTag = content.querySelector<HTMLScriptElement>('script[src="https://s3.tradingview.com/tv.js"]');
+    const inlineScriptTag = Array.from(content.querySelectorAll<HTMLScriptElement>('script')).find(s => !s.src);
+    
+    const widgetContainer = content.querySelector('.tradingview-widget-container');
+    if (widgetContainer) {
+      container.appendChild(widgetContainer);
+    }
+
+    if (scriptTag && inlineScriptTag) {
+      const newScript = document.createElement('script');
+      newScript.src = scriptTag.src;
+      newScript.async = true;
+      newScript.onload = () => {
+        const newInlineScript = document.createElement('script');
+        newInlineScript.innerHTML = inlineScriptTag.innerHTML;
+        container.appendChild(newInlineScript);
+      };
+      document.body.appendChild(newScript);
+
+      return () => {
+        if (document.body.contains(newScript)) {
+          document.body.removeChild(newScript);
+        }
+      };
+    }
+  }, [htmlContent]);
+
+  return <div ref={containerRef} />;
+});
+
+interface StockHolding {
+  symbol: string;
+  name: string;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number;
+}
+
+interface WatchlistItem {
+  symbol: string;
+  name: string;
+}
+
+interface AIChatbotProps {
+  stockHoldings: StockHolding[];
+  watchlist: WatchlistItem[];
+}
 
 interface Message {
   id: string;
-  type: 'user' | 'bot';
+  type: 'user' | 'bot' | 'chart'; // chart 타입 추가
   content: string;
   timestamp: Date;
-  chart?: React.ReactNode;
 }
 
 const suggestedQuestions = [
   '내 포트폴리오 수익률은?',
-  '엔비디아 주가는?',
-  '최근 시장 동향을 알려주세요',
-  '애플의 최근 증권사 리포트 요약해줘'
+  '애플 주가는?',
+  '알파벳과 관련된 최근 기사를 찾아주세요',
+  '엔비디아의 최근 증권사 리포트 요약해줘'
 ];
 
-export function AIChatbot() {
+export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -53,31 +113,47 @@ export function AIChatbot() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const response = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: message }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: message,
+          user_stocks: stockHoldings.map(s => ({
+            "티커": s.symbol,
+            "종목명": s.name,
+            "수량": s.quantity,
+            "평균단가": s.avgPrice,
+            "현재가": s.currentPrice
+          })),
+          watchlist: watchlist.map(w => ({ "symbol": w.symbol, "name": w.name }))
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
-
-      const botResponse: Message = {
+      
+      const newMessages: Message[] = [];
+      
+      // LLM 답변 메시지
+      newMessages.push({
         id: (Date.now() + 1).toString(),
         type: 'bot',
         content: data.answer,
         timestamp: new Date(),
-        // tradingview_html이 있으면 차트로 표시 (옵션)
-        chart: data.tradingview_html 
-          ? <div dangerouslySetInnerHTML={{ __html: data.tradingview_html }} /> 
-          : undefined
-      };
-      setMessages(prev => [...prev, botResponse]);
+      });
+      
+      // TradingView 차트가 있으면 별도의 메시지로 추가
+      if (data.tradingview_html) {
+        newMessages.push({
+          id: (Date.now() + 2).toString(),
+          type: 'chart',
+          content: data.tradingview_html,
+          timestamp: new Date(),
+        });
+      }
+
+      setMessages(prev => [...prev, ...newMessages]);
 
     } catch (error) {
       const errorMessage: Message = {
@@ -91,50 +167,55 @@ export function AIChatbot() {
       setIsLoading(false);
     }
   };
-
-  const handleSuggestedQuestion = (question: string) => {
-    handleSendMessage(question);
-  };
+  
+  const handleSuggestedQuestion = (question: string) => handleSendMessage(question);
 
   return (
     <div className="flex flex-col h-full w-full bg-background text-foreground">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-lg p-3 ${
-                  message.type === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                <div className="flex items-start space-x-2">
-                  {message.type === 'bot' && <Bot className="w-4 h-4 mt-0.5 text-blue-600" />}
-                  <div className="flex-1">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-3 space-y-4">
+        {messages.map((message) => {
+          if (message.type === 'user') {
+            return (
+              <div key={message.id} className="flex justify-end">
+                <div className="max-w-[85%] rounded-lg p-3 bg-primary text-primary-foreground">
+                  <div className="flex items-start gap-2">
                     <p className="text-sm leading-relaxed">{message.content}</p>
-                    {message.chart && <div className="mt-2">{message.chart}</div>}
+                    <User className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   </div>
-                  {message.type === 'user' && (
-                    <User className="w-4 h-4 mt-0.5 text-primary-foreground" />
-                  )}
                 </div>
               </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-lg p-3 bg-muted text-muted-foreground">
-                <div className="flex items-center space-x-2">
-                  <Bot className="w-4 h-4 mt-0.5 text-blue-600" />
-                  <Loader2 className="w-4 h-4 animate-spin" />
+            );
+          }
+          if (message.type === 'bot') {
+            return (
+              <div key={message.id} className="flex justify-start">
+                <div className="max-w-[85%]">
+                  <div className="flex items-start gap-2">
+                    <Bot className="w-5 h-5 mt-0.5 text-blue-600 flex-shrink-0" />
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap pt-0.5">{message.content}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          }
+          if (message.type === 'chart') {
+            return (
+              <div key={message.id} className="w-full h-[350px] bg-card rounded-lg overflow-hidden border">
+                <TradingViewWidget htmlContent={message.content} />
+              </div>
+            );
+          }
+          return null;
+        })}
+        {isLoading && (
+          <div className="flex justify-start">
+             <div className="flex items-start gap-2">
+                <Bot className="w-5 h-5 mt-0.5 text-blue-600 flex-shrink-0" />
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+             </div>
+          </div>
+        )}
       </div>
 
       {/* Input Area */}
@@ -154,25 +235,26 @@ export function AIChatbot() {
               </Button>
             ))}
           </div>
-
-          <div className="flex space-x-2">
+          {/* Input form */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage(inputValue);
+            }}
+            className="flex items-center gap-2"
+          >
             <Input
+              type="text"
+              placeholder="메시지를 입력하세요..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="질문을 입력하세요..."
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
-              className="flex-1 h-10 bg-background text-sm"
+              className="flex-1"
               disabled={isLoading}
             />
-            <Button 
-              onClick={() => handleSendMessage(inputValue)} 
-              size="sm"
-              className="h-10 px-4"
-              disabled={isLoading}
-            >
+            <Button type="submit" size="icon" disabled={isLoading}>
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
-          </div>
+          </form>
         </div>
       </div>
     </div>

@@ -9,3 +9,11 @@ langchain-naver
 langchain
 langchain-community
 gunicorn
+langchain-core
+psycopg2-binary
+pandas
+tiktoken
+arize-phoenix
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp

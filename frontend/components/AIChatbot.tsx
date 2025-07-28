@@ -15,9 +15,9 @@ interface Message {
 
 const suggestedQuestions = [
   '내 포트폴리오 수익률은?',
-  '엔비디아 주가는?',
+  '애플 주가는?',
   '최근 시장 동향을 알려주세요',
-  '애플의 최근 증권사 리포트 요약해줘'
+  '엔비디아의 최근 증권사 리포트 요약해줘'
 ];
 
 const mockResponses: { [key: string]: string } = {
