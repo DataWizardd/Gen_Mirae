@@ -76,7 +76,7 @@ const suggestedQuestions = [
   '내 포트폴리오 수익률은?',
   '애플 주가는?',
   '알파벳과 관련된 최근 기사를 찾아주세요',
-  '엔비디아의 최근 증권사 리포트 요약해줘'
+  '아마존의 최근 증권사 리포트 요약해줘'
 ];
 
 export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
@@ -190,7 +190,7 @@ export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
           if (message.type === 'bot') {
             return (
               <div key={message.id} className="flex justify-start">
-                <div className="max-w-[85%]">
+                <div className="w-full">
                   <div className="flex items-start gap-2">
                     <Bot className="w-5 h-5 mt-0.5 text-blue-600 flex-shrink-0" />
                     <p className="text-sm leading-relaxed whitespace-pre-wrap pt-0.5">{message.content}</p>

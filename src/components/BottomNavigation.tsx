@@ -1,6 +1,7 @@
 import { 
   Home, 
   Newspaper, 
+  FileText, // Add FileText icon for the report
   BrainCircuit,
   MessageCircle 
 } from 'lucide-react';
@@ -14,6 +15,7 @@ interface BottomNavigationProps {
 const navItems = [
   { id: 'dashboard', label: '홈', icon: Home },
   { id: 'feed', label: '투자 피드', icon: Newspaper },
+  { id: 'report', label: 'AI 리포트', icon: FileText },
   { id: 'discovery', label: 'AI 종목 발굴', icon: BrainCircuit },
   { id: 'chat', label: 'AI Analyst', icon: MessageCircle },
 ];
@@ -37,7 +39,7 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
               }`}
             >
               <Icon className={`w-5 h-5 mb-1 ${isActive ? 'text-primary' : ''}`} />
-              <span className="text-xs">{item.label}</span>
+              <span className="text-xs" style={{ fontSize: '11px' }}>{item.label}</span>
             </button>
           );
         })}

@@ -394,6 +394,8 @@ class Orchestrator:
                     "### 카테고리:\n"
                     "- GET_PORTFOLIO_PERFORMANCE: '수익률', '계좌 현황', '보유 종목' 등 포트폴리오의 수치적 실적을 묻는 질문\n"
                     "- ANALYZE_PORTFOLIO_COMPOSITION: '포트폴리오 평가', '분석', '진단', '어때' 등 보유 종목 구성에 대한 질적 분석을 요청하는 질문\n"
+                    "- GET_WATCHLIST_STOCKS: '관심 종목 리스트', '관심 종목 뭐있지' 등 전체 관심 종목 목록을 요청하는 질문\n"
+                    "- GET_WATCHLIST_STOCK_PRICE: '관심 종목인 OOO 가격'과 같이 관심 종목 중 특정 종목의 가격을 묻는 질문\n"
                     "- RANK_WATCHLIST_STOCKS: '관심 종목' 중에서 '추천', '매력', '골라줘' 등 순위나 우열을 가려달라는 질문\n"
                     "- ANALYZE_WATCHLIST_STOCKS: '관심 종목'의 특징이나 공통점을 '분석'해달라는 질문\n"
                     "- GET_UNSTRUCTURED_REPORTS: '최신 리포트', '최근 증권사 리포트', '리포트 알려줘' 등 DB의 비정형 리포트 요약을 요청하는 질문\n"
@@ -434,6 +436,33 @@ class Orchestrator:
         elif intent == "ANALYZE_PORTFOLIO_COMPOSITION":
             answer, tradingview_html = self.portfolio_analysis_agent.run(user_stocks)
             return answer, tradingview_html, "persona"
+
+        # 관심 종목 리스트 조회
+        elif intent == "GET_WATCHLIST_STOCKS":
+            if not watchlist:
+                return "관심 종목이 등록되어 있지 않습니다. 먼저 관심 종목을 추가해주세요.", None, "system"
+            
+            stock_list = "\n".join([f"- {item['name']} ({item['symbol']})" for item in watchlist])
+            answer = f"현재 등록된 관심 종목은 다음과 같습니다:\n{stock_list}"
+            return answer, None, "system"
+
+        # 관심 종목의 특정 가격 조회
+        elif intent == "GET_WATCHLIST_STOCK_PRICE":
+            if not watchlist:
+                return "관심 종목이 등록되어 있지 않습니다.", None, "system"
+
+            # 사용자 질문에서 종목명 또는 티커 추출
+            found_symbol = None
+            for item in watchlist:
+                if item['name'].lower() in user_query.lower() or item['symbol'].lower() in user_query.lower():
+                    found_symbol = item['symbol']
+                    break
+            
+            if not found_symbol:
+                return "어떤 관심 종목의 가격이 궁금하신가요? 종목명을 정확히 알려주세요.", None, "system"
+            
+            answer, tradingview_html = self.structured_agent.get_stock_price(found_symbol)
+            return answer, tradingview_html, "structured (price)"
 
         # 관심 종목 순위 추천
         elif intent == "RANK_WATCHLIST_STOCKS":

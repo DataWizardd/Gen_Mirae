@@ -5,6 +5,7 @@ import { AssetSummaryCards, AssetData } from "./components/AssetSummaryCards";
 import { StockHoldings } from "./components/StockHoldings";
 import { InvestmentFeed } from "./components/InvestmentFeed";
 import { AIDiscovery } from "./components/AIDiscovery";
+import { AIReportGenerator } from "./components/AIReportGenerator";
 import { AIChatbot } from "./components/AIChatbot";
 import { PerformanceSummary } from "./components/PerformanceSummary";
 import { AgentNotifications } from "./components/AgentNotifications";
@@ -14,7 +15,7 @@ import { Watchlist, WatchlistItem } from "./components/Watchlist";
 // import { MessageCircle } from "lucide-react";
 
 // StockHolding 인터페이스 정의
-interface StockHolding {
+export interface StockHolding {
   symbol: string;
   name: string;
   quantity: number;
@@ -33,12 +34,14 @@ const initialPortfolio: Omit<StockHolding, 'currentPrice' | 'change' | 'changePe
   { symbol: 'GOOGL', name: '알파벳', quantity: 12, avgPrice: 140.70 },
 ];
 
+/*
 const tabTitles = {
   dashboard: "나만의 맞춤형 애널리스트",
   feed: "투자 피드",
   discovery: "AI 종목 발굴",
   chat: "AI Analyst",
 };
+*/
 
 export default function App() {
   const [stockHoldings, setStockHoldings] = useState<StockHolding[]>([]);
@@ -189,6 +192,9 @@ export default function App() {
       case "discovery":
         return <AIDiscovery />;
 
+      case "report":
+        return <AIReportGenerator stockHoldings={stockHoldings} />;
+
       case "chat":
         return <AIChatbot stockHoldings={stockHoldings} watchlist={watchlistData} />;
 
@@ -199,9 +205,7 @@ export default function App() {
   
   return (
     <div className="iphone-container flex flex-col">
-      <MobileHeader
-        title={tabTitles[activeTab as keyof typeof tabTitles]}
-      />
+      <MobileHeader />
 
       <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar" style={{paddingBottom: activeTab === 'chat' ? '64px' : '0px'}}>
         <main className="px-4 py-4 space-y-4 flex-1">
