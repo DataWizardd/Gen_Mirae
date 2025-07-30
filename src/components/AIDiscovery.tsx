@@ -1,6 +1,12 @@
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Zap, TrendingUp, BarChart } from 'lucide-react';
+import { Zap, TrendingUp, BarChart, Plus } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 interface DiscoveryItem {
   id: string;
@@ -47,7 +53,7 @@ export function AIDiscovery() {
     <div className="space-y-4">
       {mockDiscovery.map((item) => (
         <Card key={item.id} className="p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-start justify-between mb-3">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-full">
                 <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -57,9 +63,18 @@ export function AIDiscovery() {
                 <p className="text-xs text-muted-foreground">{item.description}</p>
               </div>
             </div>
-            <Button size="sm" variant="outline">
-              관심 종목 추가
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" className="flex-shrink-0 w-6 h-6 p-0">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>관심 종목 추가</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           <p className="text-sm text-muted-foreground mb-3">{item.reason}</p>

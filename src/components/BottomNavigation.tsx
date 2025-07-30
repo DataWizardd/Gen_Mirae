@@ -14,7 +14,7 @@ interface BottomNavigationProps {
 
 const navItems = [
   { id: 'dashboard', label: '홈', icon: Home },
-  { id: 'feed', label: '투자 피드', icon: Newspaper },
+  { id: 'feed', label: 'AI 인사이트', icon: Newspaper },
   { id: 'report', label: 'AI 리포트', icon: FileText },
   { id: 'discovery', label: 'AI 종목 발굴', icon: BrainCircuit },
   { id: 'chat', label: 'AI Analyst', icon: MessageCircle },
