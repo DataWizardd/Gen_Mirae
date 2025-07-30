@@ -1,6 +1,3 @@
-# app.py
-# -*- coding: utf-8 -*-
-
 import os
 import streamlit as st
 import streamlit.components.v1 as components
@@ -33,7 +30,7 @@ PG_PASSWORD      = os.getenv("PG_PASSWORD")
 
 if not all([OPENAI_API_KEY, OPENAI_API_BASE, TAVILY_API_KEY,
             PG_HOST, PG_PORT, PG_NAME, PG_USER, PG_PASSWORD]):
-    st.error("❗ .env에 필요한 환경변수를 모두 설정해주세요.")
+    st.error(".env에 필요한 환경변수를 모두 설정 바람")
     st.stop()
 
 os.environ["OPENAI_API_KEY"]  = OPENAI_API_KEY
@@ -41,7 +38,7 @@ os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
 
 st.set_page_config(page_title="나만의 AI 애널리스트", layout="wide")
 
-# 디자이너 CSS 스타일 적용
+# CSS 스타일 
 st.markdown("""
 <style>
 :root {
@@ -150,7 +147,7 @@ body, .stApp, .block-container {
 
 st.title("📊 나만의 맞춤형 AI 애널리스트")
 
-# 반드시 가장 먼저 user_stocks 초기화
+# user_stocks 초기화
 if "user_stocks" not in st.session_state:
     st.session_state["user_stocks"] = [
         {"종목명":"Apple Inc.","티커":"AAPL","수량":5,"평균단가":150},
@@ -324,7 +321,7 @@ with tab4:
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
 
-    # 1. 항상 히스토리 먼저 렌더링
+    # 히스토리 먼저 렌더링
     for msg in st.session_state["messages"]:
         if msg["role"] == "user":
             st.chat_message("user").write(msg["content"])
@@ -335,7 +332,7 @@ with tab4:
             with st.expander("🤔 사용된 에이전트 유형", expanded=False):
                 st.markdown(f"**선택된 에이전트:** {msg.get('agent_type','-')}")
 
-    # 2. 사용자 입력 처리 (입력 시에만 메시지 추가)
+    # 사용자 입력 처리 (입력 시에만 메시지 추가)
     if user_input := st.chat_input("메시지를 입력하세요..."):
         st.session_state["messages"].append({"role": "user", "content": user_input})
         st.chat_message("user").write(user_input)  # 사용자 질문을 즉시 채팅창에 출력

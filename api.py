@@ -2,163 +2,138 @@
 # -*- coding: utf-8 -*-
 
 import os
-# import phoenix as px
-# from phoenix.client import Client
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-from fastapi import FastAPI
+import re
+import logging
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from langchain_naver import ChatClovaX
-from langchain_community.tools.tavily_search import TavilySearchResults
-from clova_config import MODEL_PARAMS
-from agent.agents import Orchestrator, StructuredAgent, UnstructuredAgent, WebAgent
+# 에이전트 임포트
+from agent.agents import Chatbot
+from agent.report_agent import ReportAgent
 
-# ------------------------------------------------------------------------------
-# 환경설정
-# ------------------------------------------------------------------------------
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
-PHOENIX_URL      = os.getenv("PHOENIX_URL")
-OPENAI_API_KEY   = os.getenv("OPENAI_API_KEY")
-OPENAI_API_BASE  = os.getenv("OPENAI_API_BASE")
-TAVILY_API_KEY   = os.getenv("TAVILY_API_KEY")
-PG_HOST          = os.getenv("PG_HOST")
-PG_PORT          = os.getenv("PG_PORT")
-PG_NAME          = os.getenv("PG_NAME")
-PG_USER          = os.getenv("PG_USER")
-PG_PASSWORD      = os.getenv("PG_PASSWORD")
-
-os.environ["OPENAI_API_KEY"]  = OPENAI_API_KEY
-os.environ["OPENAI_API_BASE"] = OPENAI_API_BASE
-
-# 데이터베이스 파라미터 정의
-db_params = {
-    "dbname": PG_NAME, "user": PG_USER, "password": PG_PASSWORD,
-    "host": PG_HOST,   "port": PG_PORT
-}
-
-# ------------------------------------------------------------------------------
-# Phoenix Tracing 설정 (임시 비활성화)
-# ------------------------------------------------------------------------------
-# if PHOENIX_URL:
-#     # Phoenix Client 초기화 (사용자 제안 적용)
-#     client = Client(base_url=PHOENIX_URL)
-#     # launch_app에 client를 전달하여 원격 서버에 연결
-#     session = px.launch_app(client=client)
-
-#     # OpenTelemetry 설정
-#     tracer_provider = TracerProvider()
-#     tracer_provider.add_span_processor(
-#         BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{PHOENIX_URL}/v1/traces"))
-#     )
-#     trace.set_tracer_provider(tracer_provider)
-#     tracer = trace.get_tracer("Mirae-RAG-App")
-#     print(f"✅ Phoenix Tracing is enabled. View at: {session.url}")
-# else:
-#     print("⚠️ Phoenix Tracing is disabled. Set PHOENIX_URL environment variable to enable.")
-tracer = trace.get_tracer("Mirae-RAG-App-no-tracing")
-
-
-# ------------------------------------------------------------------------------
-# FastAPI 앱 및 모델 초기화
-# ------------------------------------------------------------------------------
 app = FastAPI()
 
-# CORS 미들웨어 추가
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 모든 출처 허용 (프로덕션용)
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # 모든 HTTP 메소드 허용
-    allow_headers=["*"],  # 모든 HTTP 헤더 허용
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-llm = ChatClovaX(
-    model="HCX-005",
-    max_tokens=MODEL_PARAMS["max_tokens"],
-    temperature=MODEL_PARAMS["temperature"],
-    top_p=MODEL_PARAMS["top_p"],
-    stream=False,
-)
-search_tool = TavilySearchResults(api_key=TAVILY_API_KEY, max_results=5)
-orchestrator = Orchestrator(llm, search_tool, db_params)
+# --- Pydantic 모델 정의 ---
+class ChatMessage(BaseModel):
+    type: str
+    content: str
 
-user_stocks = [
-    {"종목명":"Apple Inc.","티커":"AAPL","수량":5,"평균단가":150},
-    {"종목명":"Nvidia Corp.","티커":"NVDA","수량":3,"평균단가":200},
-    {"종목명":"Microsoft Corp.","티커":"MSFT","수량":10,"평균단가":300},
-    {"종목명":"Amazon.com, Inc.","티커":"AMZN","수량":2,"평균단가":100},
-    {"종목명":"Alphabet Inc.","티커":"GOOGL","수량":4,"평균단가":140},
-]
-
-# ------------------------------------------------------------------------------
-# Pydantic 모델 정의
-# ------------------------------------------------------------------------------
 class ChatRequest(BaseModel):
     message: str
     user_stocks: Optional[List[Dict[str, Any]]] = None
     watchlist: Optional[List[Dict[str, str]]] = None
+    chat_history: Optional[List[ChatMessage]] = []
 
 class StockDetailsRequest(BaseModel):
     symbols: List[str]
 
-# ------------------------------------------------------------------------------
-# API 엔드포인트
-# ------------------------------------------------------------------------------
-@app.post("/chat")
-async def chat(request: ChatRequest):
-    user_stocks_data = request.user_stocks if request.user_stocks is not None else []
-    watchlist_data = request.watchlist if request.watchlist is not None else []
-    
-    answer, tradingview_html, agent_type = orchestrator.route(request.message, user_stocks_data, watchlist_data, db_params)
-    return {"answer": answer, "tradingview_html": tradingview_html, "agent_type": agent_type}
+class ReportRequest(BaseModel):
+    ticker: str
+    report_type: str = "full"
+
+# --- API 엔드포인트 ---
 
 @app.post("/stock-details")
 async def get_stock_details(request: StockDetailsRequest):
-    conn = psycopg2.connect(**db_params)
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-    details = {}
-    for symbol in request.symbols:
-        cur.execute("""
-            SELECT time, close
-            FROM stock_price
-            WHERE symbol = %s
-            ORDER BY time DESC
-            LIMIT 2
-        """, (symbol,))
-        prices = cur.fetchall()
+    """홈 화면의 보유/관심 종목 가격 정보를 반환하는 엔드포인트"""
+    db_params = {
+        "dbname": os.getenv("PG_NAME"), "user": os.getenv("PG_USER"),
+        "password": os.getenv("PG_PASSWORD"), "host": os.getenv("PG_HOST"),
+        "port": os.getenv("PG_PORT")
+    }
+    conn = None
+    try:
+        conn = psycopg2.connect(**db_params)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        details = {}
+        for symbol in request.symbols:
+            cur.execute("SELECT time, close FROM stock_price WHERE symbol = %s ORDER BY time DESC LIMIT 1", (symbol,))
+            latest_price_row = cur.fetchone()
+
+            if latest_price_row:
+                latest_price = latest_price_row['close']
+                cur.execute("SELECT close FROM stock_price WHERE symbol = %s AND time < %s::date ORDER BY time DESC LIMIT 1", (symbol, latest_price_row['time']))
+                previous_price_row = cur.fetchone()
+                previous_price = previous_price_row['close'] if previous_price_row else latest_price
+                change = latest_price - previous_price
+                change_percent = (change / previous_price) * 100 if previous_price != 0 else 0
+                details[symbol] = {"price": latest_price, "change": change, "changePercent": change_percent}
+            else:
+                details[symbol] = {"price": 0, "change": 0, "changePercent": 0}
+        return details
+    except psycopg2.Error as e:
+        logging.error(f"DB 오류: {e}")
+        raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@app.post("/generate_report")
+async def generate_report_endpoint(request: ReportRequest):
+    """AI 리포트를 생성하는 엔드포인트"""
+    try:
+        agent = ReportAgent(request.ticker, request.report_type)
+        report_data = agent.run()
+        return report_data
+    except Exception as e:
+        logging.exception("리포트 생성 중 오류 발생")
+        raise HTTPException(status_code=500, detail=f"리포트 생성 중 오류 발생: {str(e)}")
+
+@app.get("/reports/{file_name}")
+async def get_report_file(file_name: str):
+    file_path = os.path.join("/tmp", file_name)
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type='application/pdf', filename=file_name)
+    raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+
+# 전역 Chatbot 인스턴스 (메모리 효율을 위해 한번만 생성)
+chatbot_agent = Chatbot()
+
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    """챗봇 응답을 처리하는 엔드포인트"""
+    try:
+        user_info = {"user_stocks": request.user_stocks, "watchlist": request.watchlist}
         
-        if len(prices) >= 2:
-            latest_price = prices[0]['close']
-            previous_price = prices[1]['close']
-            change = latest_price - previous_price
-            change_percent = (change / previous_price) * 100 if previous_price != 0 else 0
-            details[symbol] = {
-                "price": latest_price,
-                "change": change,
-                "changePercent": change_percent
-            }
-        elif len(prices) == 1:
-            details[symbol] = {
-                "price": prices[0]['close'],
-                "change": 0,
-                "changePercent": 0
-            }
-    
-    cur.close()
-    conn.close()
-    return details
+        lc_chat_history = []
+        for msg in request.chat_history:
+            if msg.type == 'human':
+                lc_chat_history.append({"role": "user", "content": msg.content})
+            elif msg.type == 'ai':
+                lc_chat_history.append({"role": "assistant", "content": msg.content})
+
+        result = chatbot_agent.run(
+            query=request.message,
+            user_info=user_info,
+            chat_history=lc_chat_history
+        )
+        return result
+    except Exception as e:
+        logging.error(f"Chat API 오류: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="챗봇 응답 생성 중 오류가 발생했습니다.")
 
 # React 앱 서빙 (가장 마지막에 위치해야 함)
-app.mount("/", StaticFiles(directory="build", html=True), name="static") 
+app.mount("/", StaticFiles(directory="build", html=True), name="static")
+
+@app.get("/{full_path:path}")
+async def catch_all(full_path: str):
+    return FileResponse("build/index.html")

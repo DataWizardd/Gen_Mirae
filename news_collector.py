@@ -5,9 +5,18 @@ import psycopg2
 from newsapi import NewsApiClient
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
+from sentence_transformers import SentenceTransformer
+import torch
+from pgvector.psycopg2 import register_vector
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# 임베딩 모델 설정
+EMBEDDING_MODEL = 'BAAI/bge-m3'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+logging.info(f"임베딩을 위해 사용하는 장치: {DEVICE}")
+model = SentenceTransformer(EMBEDDING_MODEL, device=DEVICE)
 
 def get_db_connection():
     """데이터베이스 연결을 생성합니다."""
@@ -19,6 +28,7 @@ def get_db_connection():
             password=os.getenv("PG_PASSWORD"),
             port=os.getenv("PG_PORT")
         )
+        register_vector(conn)  # pgvector 타입 어댑터 등록
         logging.info("PostgreSQL 데이터베이스에 성공적으로 연결되었습니다.")
         return conn
     except psycopg2.OperationalError as e:
@@ -41,11 +51,11 @@ def fetch_news_from_api(tickers, api_key):
                 q=ticker,
                 language='en',
                 sort_by='publishedAt',
-                page_size=50  # 한 번에 더 많은 기사를 가져옵니다.
+                page_size=50
             )["articles"]
             
             for art in articles:
-                if art.get("description") and art.get("content"): # 설명과 내용이 있는 기사만 포함
+                if art.get("description") and art.get("title"):
                     records.append({
                         "ticker":      ticker,
                         "published_at": art["publishedAt"],
@@ -62,27 +72,54 @@ def fetch_news_from_api(tickers, api_key):
     logging.info("뉴스 수집이 완료되었습니다.")
     return pd.DataFrame(records)
 
+def create_embeddings(df):
+    """뉴스 제목과 요약을 합쳐 임베딩을 생성합니다."""
+    if df.empty:
+        logging.info("임베딩을 생성할 뉴스가 없습니다.")
+        return df
+    
+    # 임베딩할 텍스트 조합
+    df['text_to_embed'] = df['title'].fillna('') + "\n\n" + df['description'].fillna('')
+    
+    logging.info("뉴스 데이터 임베딩 생성을 시작합니다...")
+    embeddings = model.encode(df["text_to_embed"].tolist(), show_progress_bar=True)
+    df['embedding'] = list(embeddings)
+    logging.info("임베딩 생성이 완료되었습니다.")
+    
+    # 임시 텍스트 컬럼 삭제
+    df.drop(columns=['text_to_embed'], inplace=True)
+    return df
+
 def insert_news_to_db(conn, df_news):
-    """수집한 뉴스 데이터를 데이터베이스에 삽입합니다."""
+    """수집 및 임베딩된 뉴스 데이터를 데이터베이스에 삽입합니다."""
     if df_news.empty:
         logging.info("삽입할 새로운 뉴스가 없습니다.")
         return
 
-    # DataFrame을 튜플 리스트로 변환
-    data_tuples = [tuple(x) for x in df_news.to_numpy()]
+    # 컬럼 순서를 DB 테이블과 일치시킴
+    cols = ["ticker", "published_at", "source_name", "title", "description", "content", "url", "embedding"]
+    df_to_insert = df_news[cols]
     
-    # SQL 쿼리 (ON CONFLICT를 사용하여 URL 중복 시 삽입하지 않음)
-    query = """
-        INSERT INTO stock_news (ticker, published_at, source_name, title, description, content, url)
+    data_tuples = [tuple(x) for x in df_to_insert.to_numpy()]
+    
+    query = f"""
+        INSERT INTO stock_news ({', '.join(cols)})
         VALUES %s
-        ON CONFLICT (url) DO NOTHING;
+        ON CONFLICT (url) DO UPDATE SET
+            ticker = EXCLUDED.ticker,
+            published_at = EXCLUDED.published_at,
+            source_name = EXCLUDED.source_name,
+            title = EXCLUDED.title,
+            description = EXCLUDED.description,
+            content = EXCLUDED.content,
+            embedding = EXCLUDED.embedding;
     """
     
     with conn.cursor() as cursor:
         try:
             execute_values(cursor, query, data_tuples)
             conn.commit()
-            logging.info(f"{cursor.rowcount}개의 새로운 뉴스를 데이터베이스에 성공적으로 삽입했습니다.")
+            logging.info(f"{cursor.rowcount}개의 뉴스를 데이터베이스에 성공적으로 삽입/업데이트했습니다.")
         except psycopg2.Error as e:
             logging.error(f"데이터 삽입 중 오류 발생: {e}")
             conn.rollback()
@@ -98,14 +135,17 @@ def main():
     df_news = fetch_news_from_api(TICKERS, NEWSAPI_KEY)
     
     if not df_news.empty:
-        # 2. 데이터베이스 연결
+        # 2. 임베딩 생성
+        df_news_with_embeddings = create_embeddings(df_news)
+
+        # 3. 데이터베이스 연결
         conn = get_db_connection()
         if conn:
-            # 3. 데이터베이스에 삽입
-            insert_news_to_db(conn, df_news)
-            # 4. 연결 종료
+            # 4. 데이터베이스에 삽입
+            insert_news_to_db(conn, df_news_with_embeddings)
+            # 5. 연결 종료
             conn.close()
             logging.info("데이터베이스 연결을 종료합니다.")
 
 if __name__ == "__main__":
-    main() 
+    main()

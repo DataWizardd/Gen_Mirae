@@ -18,15 +18,15 @@ DOWNLOAD_DIR = "sec_filings"
 EMAIL_ADDRESS = os.getenv("SEC_EMAIL_ADDRESS", "james4327@gmail.com")
 # 분석 대상 기업 티커
 TICKERS = ["AAPL", "NVDA", "MSFT", "AMZN", "GOOGL"]
-# 다운로드할 공시 유형 (10-K만 활성화)
+# 다운로드할 공시 유형 
 FORM_TYPES = [
     "10-K", 
-    # "10-Q", 
-    # "8-K", 
-    # "S-1", 
-    # "DEF 14A", 
-    # "SC 13D", 
-    # "SC 13G"
+    "10-Q", 
+    "8-K", 
+    "S-1", 
+    "DEF 14A", 
+    "SC 13D", 
+    "SC 13G"
 ]
 # 임베딩 모델
 EMBEDDING_MODEL = 'BAAI/bge-m3'
