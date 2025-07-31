@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Download, ArrowRight, Loader2, ServerCrash, FileText } from "lucide-react";
 import { Button } from "./ui/button";
+import { marked } from 'marked'; // marked 라이브러리 임포트
 
 interface StockHolding {
   symbol: string;
@@ -49,6 +50,7 @@ export function AIReportGenerator({ stockHoldings }: AIReportGeneratorProps) {
 
       const reportData = await response.json();
       
+      // 'marked'를 사용하여 마크다운을 HTML로 변환
       const generatedHTML = `
         <h1 style="font-size: 24px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 10px;">
           ${reportData.title}
@@ -56,8 +58,8 @@ export function AIReportGenerator({ stockHoldings }: AIReportGeneratorProps) {
         <p style="font-size: 12px; color: #666;">리포트 생성일: ${new Date().toLocaleDateString()}</p>
         
         ${reportData.sections.map((section: ReportSection) => `
-          <h2 style="font-size: 18px; font-weight: bold; margin-top: 30px;">${section.heading}</h2>
-          <p>${section.content.replace(/\n/g, '<br/>')}</p>
+          <h2 style="font-size: 18px; font-weight: bold; margin-top: 30px; padding-bottom: 5px; border-bottom: 1px solid #eee;">${section.heading}</h2>
+          <div class="prose-p:leading-relaxed prose-strong:font-semibold">${marked(section.content)}</div>
         `).join('')}
       `;
 
@@ -117,7 +119,7 @@ export function AIReportGenerator({ stockHoldings }: AIReportGeneratorProps) {
                 <Button onClick={handleDownloadPdf} variant="outline">
                   <Download className="mr-2 h-4 w-4" />
                   PDF
-                </Button>
+                 </Button>
               )}
             </div>
           </CardHeader>
@@ -178,7 +180,7 @@ export function AIReportGenerator({ stockHoldings }: AIReportGeneratorProps) {
                 리포트를 발행할 보유 종목이 없습니다.
               </p>
             )}
-          </div>
+           </div>
         </CardContent>
       </Card>
     </div>

@@ -1,3 +1,4 @@
+import os
 import logging
 import pandas as pd
 from typing import Dict, List, Any
@@ -31,7 +32,7 @@ class ReportAgent:
         logging.info(f"[{self.ticker}] 리포트 생성을 시작합니다 (타입: {self.report_type})...")
         
         self._retrieve_data()
-        self._generate_perspectives()
+        self._generate_report_sections()
         self._synthesize_report()
         
         if self.report_type == "full":
@@ -49,45 +50,48 @@ class ReportAgent:
         self.retrieved_data['prices'] = data_retrieval.get_stock_prices(self.ticker)
         self.retrieved_data['gdelt'] = data_retrieval.get_gdelt_events(self.ticker)
 
-    def _generate_perspectives(self):
-        """각 질문에 대해 데이터가 있을 경우에만 LLM 답변을 생성합니다."""
-        logging.info("다각도 질문 및 답변 생성 단계 시작...")
+    def _generate_report_sections(self):
+        """각 주제에 대해 보고서 섹션을 생성합니다."""
+        logging.info("보고서 섹션 생성 단계 시작...")
         
-        question_context_map = {
-            "이 종목의 주요 재무 강점과 약점은 무엇인가?": ['financials', 'valuation'],
-            "최근 뉴스·공시·커뮤니티 이슈 중 투자에 긍정적·부정적 영향을 준 이벤트는?": ['documents'],
-            "주가 모멘텀(가격 추세·거래량 변화)은 어떤가?": ['prices'],
-            "GDELT 이벤트 지표를 고려했을 때, 글로벌 환경 변화가 이 종목에 미칠 영향은?": ['gdelt']
+        section_topic_map = {
+            "재무 분석": ['financials', 'valuation'],
+            "최신 이벤트 및 여론 분석": ['documents'],
+            "기술적 분석 및 주가 모멘텀": ['prices'],
+            "거시 경제 및 지정학적 리스크": ['gdelt']
         }
         
         prompt_template = PromptTemplate.from_template(
-            "You are a financial analyst summarizing information for a report on {ticker}.\n"
-            "Answer the following question in Korean, using only the provided context. "
-            "Do not use any external knowledge. If the context is somehow insufficient despite being provided, be concise.\n"
-            "Structure your answer in concise bullet points.\n\n"
-            "--- CONTEXT ---\n"
+            "당신은 {ticker}에 대한 금융 분석 보고서를 작성하는 AI 애널리스트입니다.\n"
+            "아래 '주제'에 대해 '제공된 컨텍스트'의 데이터를 **분석하고 해석하여** 보고서의 본문 섹션을 한국어로 작성해 주십시오.\n\n"
+            "**매우 중요한 지침:**\n"
+            "1.  **통찰력 있는 분석 제공:** 절대 데이터를 그대로 나열하지 마십시오. 데이터가 의미하는 바(예: 재무 건전성, 수익성, 성장 추세, 시장 리스크 등)에 대한 전문적인 분석과 통찰을 제공해야 합니다.\n"
+            "2.  **제목 반복 금지:** 생성하는 내용은 '주제'에 대한 본문이어야 합니다. **답변에 '주제'나 제목을 절대로 다시 쓰지 마세요.**\n"
+            "3.  **객관적인 보고서 형식:** 대화체가 아닌, 전문가적이고 분석적인 톤으로 간결하게 작성하세요.\n"
+            "4.  **컨텍스트 기반 작성:** 제공된 데이터 외의 정보는 절대 사용하지 마세요.\n"
+            "5.  **구조화된 내용:** 가독성을 위해 핵심 내용을 불릿 포인트(`-`)나 굵은 글씨(`**`)로 강조하여 구조화하세요.\n\n"
+            "--- 제공된 컨텍스트 ---\n"
             "{context_str}\n\n"
-            "--- QUESTION ---\n"
-            "{question}\n\n"
-            "--- ANSWER (in Korean) ---\n"
+            "--- 주제 ---\n"
+            "{topic}\n\n"
+            "--- 보고서 본문 (제목을 절대 포함하지 말 것. 한국어, Markdown 형식) ---\n"
         )
         
         chain = prompt_template | self.llm | StrOutputParser()
         
-        for question, data_keys in question_context_map.items():
+        for topic, data_keys in section_topic_map.items():
             context_str = self._format_context_for_llm(data_keys)
             
-            # 데이터가 존재할 때만 LLM 호출
             if "No relevant data available" not in context_str:
-                logging.info(f"LLM 호출: '{question}' (데이터 존재)")
-                answer = chain.invoke({
+                logging.info(f"LLM 호출: '{topic}' 섹션 생성")
+                content = chain.invoke({
                     "ticker": self.ticker,
                     "context_str": context_str,
-                    "question": question
+                    "topic": topic
                 })
-                self.sections.append({"question": question, "answer": answer})
+                self.sections.append({"heading": topic, "content": content})
             else:
-                logging.warning(f"LLM 호출 건너뜀: '{question}' (관련 데이터 없음)")
+                logging.warning(f"LLM 호출 건너뜀: '{topic}' (관련 데이터 없음)")
 
     def _format_context_for_llm(self, data_keys: List[str]) -> str:
         """지정된 키에 해당하는 데이터만 단일 문자열로 포맷팅합니다."""
@@ -103,23 +107,12 @@ class ReportAgent:
         return "\n".join(parts) if has_data else "No relevant data available in the context."
 
     def _synthesize_report(self):
-        """5 & 6단계: 답변들을 종합하여 최종 리포트를 구조화합니다."""
+        """생성된 섹션들을 종합하여 최종 리포트를 구조화합니다."""
         logging.info("리포트 종합 및 구조화 단계 시작...")
         
-        section_mapping = {
-            "이 종목의 주요 재무 강점과 약점은 무엇인가?": "재무 분석",
-            "최근 뉴스·공시·커뮤니티 이슈 중 투자에 긍정적·부정적 영향을 준 이벤트는?": "최신 이벤트 및 여론 분석",
-            "주가 모멘텀(가격 추세·거래량 변화)은 어떤가?": "기술적 분석 및 주가 모멘텀",
-            "GDELT 이벤트 지표를 고려했을 때, 글로벌 환경 변화가 이 종목에 미칠 영향은?": "거시 경제 및 지정학적 리스크"
-        }
-        
-        # self.sections에 있는 내용만으로 리포트 구성
         self.report = {
             "title": f"{self.ticker} 종목 분석 리포트",
-            "sections": [
-                {"heading": section_mapping.get(s["question"]), "content": s["answer"]}
-                for s in self.sections if section_mapping.get(s["question"])
-            ]
+            "sections": self.sections
         }
 
     def _generate_and_set_pdf_url(self):
@@ -128,7 +121,6 @@ class ReportAgent:
         import os
         from urllib.parse import quote
         
-        # 생성할 섹션이 있을 경우에만 PDF 생성
         if self.report.get("sections"):
             local_pdf_path = pdf_generator.generate_pdf_report(self.report)
             file_name = os.path.basename(local_pdf_path)

@@ -1,139 +1,129 @@
-# api.py
-# -*- coding: utf-8 -*-
-
 import os
-import re
-import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
-from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+import logging
 
-# 에이전트 임포트
-from agent.agents import Chatbot
 from agent.report_agent import ReportAgent
+from agent.agents import Chatbot # 수정된 Chatbot 클래스 임포트
 
+# --- 로깅 설정 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# --- 환경 변수 로드 ---
 load_dotenv()
 
+# --- FastAPI 앱 초기화 ---
 app = FastAPI()
 
+# --- CORS 미들웨어 설정 ---
+origins = [
+    "http://localhost:3000",
+    "http://175.106.97.51:3000",
+    "http://www.gen-mirae.com",
+    "http://gen-mirae.com"
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# --- DB 연결 정보 ---
+db_params = {
+    "dbname": os.getenv("PG_NAME"), "user": os.getenv("PG_USER"),
+    "password": os.getenv("PG_PASSWORD"), "host": os.getenv("PG_HOST"), "port": os.getenv("PG_PORT")
+}
+
 # --- Pydantic 모델 정의 ---
-class ChatMessage(BaseModel):
-    type: str
-    content: str
-
-class ChatRequest(BaseModel):
-    message: str
-    user_stocks: Optional[List[Dict[str, Any]]] = None
-    watchlist: Optional[List[Dict[str, str]]] = None
-    chat_history: Optional[List[ChatMessage]] = []
-
 class StockDetailsRequest(BaseModel):
     symbols: List[str]
 
 class ReportRequest(BaseModel):
     ticker: str
-    report_type: str = "full"
+    report_type: str
 
-# --- API 엔드포인트 ---
+class ChatRequest(BaseModel):
+    message: str
+    user_stocks: List[Dict] = Field(default_factory=list)
+    watchlist: List[Dict] = Field(default_factory=list)
+    chat_history: Optional[List[Dict]] = Field(default_factory=list)
+
+
+# --- 라우트 핸들러 ---
+
+@app.get("/")
+def read_root():
+    return {"message": "Mirae-AI-Financial-Report-Service"}
 
 @app.post("/stock-details")
 async def get_stock_details(request: StockDetailsRequest):
-    """홈 화면의 보유/관심 종목 가격 정보를 반환하는 엔드포인트"""
-    db_params = {
-        "dbname": os.getenv("PG_NAME"), "user": os.getenv("PG_USER"),
-        "password": os.getenv("PG_PASSWORD"), "host": os.getenv("PG_HOST"),
-        "port": os.getenv("PG_PORT")
-    }
-    conn = None
-    try:
-        conn = psycopg2.connect(**db_params)
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        details = {}
-        for symbol in request.symbols:
-            cur.execute("SELECT time, close FROM stock_price WHERE symbol = %s ORDER BY time DESC LIMIT 1", (symbol,))
-            latest_price_row = cur.fetchone()
+    # ... (기존 코드와 동일) ...
+    conn = psycopg2.connect(**db_params)
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    details = {}
+    for symbol in request.symbols:
+        cur.execute("SELECT time, close FROM stock_price WHERE symbol = %s ORDER BY time DESC LIMIT 1", (symbol,))
+        latest_price_row = cur.fetchone()
+        if latest_price_row:
+            latest_price = latest_price_row['close']
+            cur.execute("SELECT close FROM stock_price WHERE symbol = %s AND time < %s::date ORDER BY time DESC LIMIT 1", (symbol, latest_price_row['time']))
+            previous_price_row = cur.fetchone()
+            previous_price = previous_price_row['close'] if previous_price_row else latest_price
+            change = latest_price - previous_price
+            change_percent = (change / previous_price) * 100 if previous_price != 0 else 0
+            details[symbol] = {"price": latest_price, "change": change, "changePercent": change_percent}
+        else:
+            details[symbol] = {"price": 0, "change": 0, "changePercent": 0}
+    cur.close()
+    conn.close()
+    return details
 
-            if latest_price_row:
-                latest_price = latest_price_row['close']
-                cur.execute("SELECT close FROM stock_price WHERE symbol = %s AND time < %s::date ORDER BY time DESC LIMIT 1", (symbol, latest_price_row['time']))
-                previous_price_row = cur.fetchone()
-                previous_price = previous_price_row['close'] if previous_price_row else latest_price
-                change = latest_price - previous_price
-                change_percent = (change / previous_price) * 100 if previous_price != 0 else 0
-                details[symbol] = {"price": latest_price, "change": change, "changePercent": change_percent}
-            else:
-                details[symbol] = {"price": 0, "change": 0, "changePercent": 0}
-        return details
-    except psycopg2.Error as e:
-        logging.error(f"DB 오류: {e}")
-        raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
-    finally:
-        if conn:
-            cur.close()
-            conn.close()
 
 @app.post("/generate_report")
 async def generate_report_endpoint(request: ReportRequest):
-    """AI 리포트를 생성하는 엔드포인트"""
+    # ... (기존 코드와 동일) ...
     try:
-        agent = ReportAgent(request.ticker, request.report_type)
+        agent = ReportAgent(ticker=request.ticker)
         report_data = agent.run()
-        return report_data
+        if not report_data or not report_data.get('sections'):
+            raise HTTPException(status_code=404, detail=f"{request.ticker}에 대한 리포트를 생성할 수 없습니다. 데이터가 부족합니다.")
+        return JSONResponse(content=report_data)
     except Exception as e:
-        logging.exception("리포트 생성 중 오류 발생")
-        raise HTTPException(status_code=500, detail=f"리포트 생성 중 오류 발생: {str(e)}")
+        logging.error(f"Report generation error for {request.ticker}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/reports/{file_name}")
 async def get_report_file(file_name: str):
+    # ... (기존 코드와 동일) ...
     file_path = os.path.join("/tmp", file_name)
     if os.path.exists(file_path):
         return FileResponse(file_path, media_type='application/pdf', filename=file_name)
     raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
 
-# 전역 Chatbot 인스턴스 (메모리 효율을 위해 한번만 생성)
-chatbot_agent = Chatbot()
-
 @app.post("/chat")
-async def chat(request: ChatRequest):
-    """챗봇 응답을 처리하는 엔드포인트"""
+async def chat_with_ai_analyst(request: ChatRequest):
     try:
-        user_info = {"user_stocks": request.user_stocks, "watchlist": request.watchlist}
-        
-        lc_chat_history = []
-        for msg in request.chat_history:
-            if msg.type == 'human':
-                lc_chat_history.append({"role": "user", "content": msg.content})
-            elif msg.type == 'ai':
-                lc_chat_history.append({"role": "assistant", "content": msg.content})
-
-        result = chatbot_agent.run(
-            query=request.message,
-            user_info=user_info,
-            chat_history=lc_chat_history
+        # Chatbot 인스턴스 생성 시 사용자 정보 전달
+        chatbot = Chatbot(
+            user_stocks=request.user_stocks,
+            watchlist=request.watchlist
         )
-        return result
+        # run 메소드에는 쿼리만 전달
+        response_data = chatbot.run(query=request.message)
+        return JSONResponse(content=response_data)
     except Exception as e:
-        logging.error(f"Chat API 오류: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="챗봇 응답 생성 중 오류가 발생했습니다.")
+        logging.error(f"Chat API error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"챗봇 처리 중 오류 발생: {e}")
 
-# React 앱 서빙 (가장 마지막에 위치해야 함)
-app.mount("/", StaticFiles(directory="build", html=True), name="static")
-
-@app.get("/{full_path:path}")
-async def catch_all(full_path: str):
-    return FileResponse("build/index.html")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

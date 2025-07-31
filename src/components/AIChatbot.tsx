@@ -2,48 +2,49 @@ import { useState, useEffect, useRef, memo } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Card } from './ui/card';
 
-const TradingViewWidget = memo(({ htmlContent }: { htmlContent: string }) => {
+// TradingView 위젯 컴포넌트
+const TradingViewWidget = memo(({ symbol }: { symbol: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !htmlContent) return;
+    if (!container || !symbol) return;
     
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
-    const oldScripts = document.querySelectorAll(`script[data-widget-id^="tradingview_widget"]`);
-    oldScripts.forEach(s => s.remove());
 
-    const template = document.createElement('template');
-    template.innerHTML = htmlContent.trim();
-    const content = template.content;
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/tv.js';
+    script.async = true;
+    script.onload = () => {
+      // @ts-ignore
+      if (window.TradingView) {
+        // @ts-ignore
+        new window.TradingView.widget({
+          "autosize": true,
+          "symbol": symbol,
+          "interval": "D",
+          "timezone": "Etc/UTC",
+          "theme": "dark",
+          "style": "1",
+          "locale": "kr",
+          "enable_publishing": false,
+          "allow_symbol_change": true,
+          "container_id": container.id
+        });
+      }
+    };
     
-    const widgetContainer = content.querySelector('.tradingview-widget-container');
-    if (widgetContainer) {
-      container.appendChild(widgetContainer);
-    }
-    
-    const scriptTag = content.querySelector<HTMLScriptElement>('script[src="https://s3.tradingview.com/tv.js"]');
-    if (scriptTag) {
-      const newScript = document.createElement('script');
-      newScript.src = scriptTag.src;
-      newScript.async = true;
-      newScript.setAttribute('data-widget-id', `tradingview_widget_${Date.now()}`);
-      newScript.onload = () => {
-        const inlineScriptContent = content.querySelector('script:not([src])')?.innerHTML;
-        if(inlineScriptContent) {
-            const newInlineScript = document.createElement('script');
-            newInlineScript.innerHTML = inlineScriptContent;
-            container.appendChild(newInlineScript);
-        }
-      };
-      document.body.appendChild(newScript);
-    }
-  }, [htmlContent]);
+    container.id = `tradingview_widget_container_${symbol}_${Date.now()}`;
+    container.appendChild(script);
 
-  return <div ref={containerRef} />;
+  }, [symbol]);
+
+  return <div ref={containerRef} style={{ height: '400px', width: '100%' }} />;
 });
+
 
 interface StockHolding {
   symbol: string; name: string; quantity: number; avgPrice: number; currentPrice: number;
@@ -56,7 +57,10 @@ interface AIChatbotProps {
   watchlist: WatchlistItem[];
 }
 interface Message {
-  id: string; type: 'user' | 'bot' | 'chart'; content: string;
+  id: string; 
+  type: 'user' | 'bot'; 
+  content: string;
+  tradingViewSymbol?: string;
 }
 
 const suggestedQuestions = [
@@ -69,6 +73,7 @@ export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,13 +86,12 @@ export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
     if (!message.trim() || isLoading) return;
 
     const userMessage: Message = { id: Date.now().toString(), type: 'user', content: message };
-    const currentMessages = [...messages, userMessage];
-    setMessages(currentMessages);
+    setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      const apiHistory = currentMessages
+      const apiHistory = [...messages, userMessage] // 현재 질문까지 포함
         .filter(msg => msg.type === 'user' || msg.type === 'bot')
         .map(msg => ({ type: msg.type === 'user' ? 'human' : 'ai', content: msg.content }));
 
@@ -96,8 +100,8 @@ export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: message,
-          user_stocks: stockHoldings.map(s => ({ "티커": s.symbol, "종목명": s.name, "수량": s.quantity, "평균단가": s.avgPrice, "현재가": s.currentPrice })),
-          watchlist: watchlist.map(w => ({ "symbol": w.symbol, "name": w.name })),
+          user_stocks: stockHoldings,
+          watchlist: watchlist,
           chat_history: apiHistory.slice(0, -1)
         }),
       });
@@ -105,37 +109,53 @@ export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
       if (!response.ok) throw new Error('서버에서 오류가 발생했습니다.');
       const data = await response.json();
       
-      const newMessages: Message[] = [];
-      if (data.answer) {
-        newMessages.push({ id: (Date.now() + 1).toString(), type: 'bot', content: data.answer });
-      }
-      if (data.tradingview_html) {
-        newMessages.push({ id: (Date.now() + 2).toString(), type: 'chart', content: data.tradingview_html });
-      }
-      setMessages(prev => [...prev, ...newMessages]);
+      const botMessage: Message = { 
+        id: (Date.now() + 1).toString(), 
+        type: 'bot', 
+        content: data.answer || "답변을 생성하지 못했습니다.",
+        tradingViewSymbol: data.tradingview_symbol || undefined
+      };
+      
+      setMessages(prev => [...prev, botMessage]);
 
     } catch (error) {
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), type: 'bot', content: '죄송합니다. 오류가 발생했습니다.' }]);
+        const errorMessage: Message = { id: (Date.now() + 1).toString(), type: 'bot', content: '죄송합니다. 오류가 발생했습니다.' };
+        setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
+
+
   return (
     <div className="flex flex-col h-full bg-background">
       <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
-          <div key={message.id} className={`flex items-end gap-2 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={message.id} className={`flex items-start gap-2 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
             {message.type === 'bot' && <Bot className="w-6 h-6 text-primary flex-shrink-0" />}
             <div className={message.type === 'user' ? 'rounded-lg px-4 py-2 bg-primary text-primary-foreground max-w-[85%]' : 'w-full'}>
-              {message.type === 'chart' ? <TradingViewWidget htmlContent={message.content} /> : <p className="text-sm whitespace-pre-wrap">{message.content}</p>}
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.type === 'bot' && message.tradingViewSymbol && (
+                <Card className="mt-2 p-0 overflow-hidden">
+                  <TradingViewWidget symbol={message.tradingViewSymbol} />
+                </Card>
+              )}
             </div>
             {message.type === 'user' && <User className="w-6 h-6 flex-shrink-0" />}
           </div>
         ))}
-        {isLoading && <div className="flex justify-start"><Bot className="w-6 h-6 text-primary flex-shrink-0" /><Loader2 className="w-6 h-6 ml-2 animate-spin" /></div>}
+
+        {/* AI 답변 로딩 인디케이터 */}
+        {isLoading && (
+          <div className="flex items-start gap-2 justify-start mt-4">
+              <Bot className="w-6 h-6 text-primary flex-shrink-0" />
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        )}
       </div>
-      <div className={`p-4 border-t bg-background transition-opacity ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+
+      <div className={`p-4 border-t bg-background`}>
         <div className="flex flex-wrap gap-2 mb-2">
             {suggestedQuestions.map((q, i) => <Button key={i} variant="outline" size="sm" className="text-xs" onClick={() => handleSendMessage(q)} disabled={isLoading}>{q}</Button>)}
         </div>
