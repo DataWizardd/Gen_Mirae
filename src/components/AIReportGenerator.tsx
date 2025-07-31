@@ -152,7 +152,7 @@ export function AIReportGenerator({ stockHoldings }: AIReportGeneratorProps) {
           AI 기업 리포트
         </h1>
         <p className="mt-2 max-w-2xl mx-auto text-md text-muted-foreground">
-          보유 종목을 선택하여 AI가 생성하는 심층 분석 리포트를 즉시 받아보세요.
+          AI가 생성하는 심층 분석 리포트를 즉시 받아보세요.
         </p>
       </div>
       <Card className="w-full max-w-2xl mx-auto">

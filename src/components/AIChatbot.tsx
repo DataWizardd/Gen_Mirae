@@ -4,6 +4,58 @@ import { Input } from './ui/input';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { Card } from './ui/card';
 
+// 마크다운 렌더링 컴포넌트
+const MarkdownText = ({ children }: { children: string }) => {
+  const renderMarkdown = (text: string) => {
+    const lines = text.split('\n');
+    
+    return lines.map((line, lineIndex) => {
+      // 불릿 포인트 처리
+      if (line.trim().startsWith('- ')) {
+        const content = line.trim().substring(2);
+        return (
+          <div key={lineIndex} className="flex items-start gap-2">
+            <span className="text-primary">•</span>
+            <span>{renderInlineMarkdown(content)}</span>
+          </div>
+        );
+      }
+      
+      // 일반 텍스트
+      if (line.trim()) {
+        return (
+          <div key={lineIndex}>
+            {renderInlineMarkdown(line)}
+          </div>
+        );
+      }
+      
+      // 빈 줄
+      return <br key={lineIndex} />;
+    });
+  };
+
+  const renderInlineMarkdown = (text: string) => {
+    // **텍스트** -> <strong>텍스트</strong>
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    const parts = text.split(boldRegex);
+    
+    return parts.map((part, index) => {
+      // 홀수 인덱스는 ** 사이의 텍스트 (bold 처리)
+      if (index % 2 === 1) {
+        return <strong key={index} className="font-semibold">{part}</strong>;
+      }
+      return part;
+    });
+  };
+
+  return (
+    <div className="text-sm space-y-1">
+      {renderMarkdown(children)}
+    </div>
+  );
+};
+
 // TradingView 위젯 컴포넌트
 const TradingViewWidget = memo(({ symbol }: { symbol: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,12 +116,18 @@ interface Message {
 }
 
 const suggestedQuestions = [
-  '내 포트폴리오 수익률은?', '애플 주가는?', '알파벳 관련 최신 뉴스 찾아줘', '아마존 최신 리포트 요약해줘'
+  '애플 주가는?', '내 보유 종목 어때?', '아마존 최근 뉴스 알려줘', '엔비디아 전망은?'
 ];
 
 export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
+  const currentDate = new Date().toLocaleDateString('ko-KR', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', type: 'bot', content: '안녕하세요! AI Analyst입니다. 무엇이든 물어보세요.' }
+    { id: '1', type: 'bot', content: `안녕하세요! AI Analyst입니다. 오늘은 ${currentDate}이네요. 투자와 관련해서 무엇이든 물어보세요!` }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -135,7 +193,11 @@ export function AIChatbot({ stockHoldings, watchlist }: AIChatbotProps) {
           <div key={message.id} className={`flex items-start gap-2 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
             {message.type === 'bot' && <Bot className="w-6 h-6 text-primary flex-shrink-0" />}
             <div className={message.type === 'user' ? 'rounded-lg px-4 py-2 bg-primary text-primary-foreground max-w-[85%]' : 'w-full'}>
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.type === 'user' ? (
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              ) : (
+                <MarkdownText>{message.content}</MarkdownText>
+              )}
               {message.type === 'bot' && message.tradingViewSymbol && (
                 <Card className="mt-2 p-0 overflow-hidden">
                   <TradingViewWidget symbol={message.tradingViewSymbol} />

@@ -25,7 +25,7 @@ export interface StockHolding {
 
 const initialPortfolio: Omit<StockHolding, 'currentPrice' | 'change' | 'changePercent' | 'value'>[] = [
   { symbol: 'AAPL', name: '애플', quantity: 10, avgPrice: 150.25 },
-  { symbol: 'NVDA', name: '엔비디아', quantity: 5, avgPrice: 220.80 },
+  { symbol: 'NVDA', name: '엔비디아', quantity: 5, avgPrice: 120.80 },
   { symbol: 'MSFT', name: '마이크로소프트', quantity: 8, avgPrice: 300.50 },
   { symbol: 'AMZN', name: '아마존', quantity: 15, avgPrice: 180.00 },
   { symbol: 'GOOGL', name: '알파벳', quantity: 12, avgPrice: 140.70 },
