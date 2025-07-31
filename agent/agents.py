@@ -11,6 +11,10 @@ from dotenv import load_dotenv
 import json
 from datetime import datetime, timedelta
 
+
+## AI Analyst Chatbot을 위한 코드
+## 향후 고도화 시 Orchestrator 및 다중 Agent 호출 구조로 변경 예정
+
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

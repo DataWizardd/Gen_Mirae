@@ -131,5 +131,5 @@ class ReportAgent:
             logging.warning("PDF 생성을 건너뜁니다. 리포트에 포함할 섹션이 없습니다.")
 
 if __name__ == '__main__':
-    # ... (테스트 코드는 동일) ...
+    
     pass

@@ -12,3 +12,6 @@ reportlab
 boto3
 langchain-openai
 duckduckgo-search
+schedule
+aiohttp
+pgvector

@@ -1,0 +1,31 @@
+[Unit]
+Description=Mirae AI Financial Report API Service
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/mirae-app
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-/root/mirae-app/.env
+ExecStart=/usr/bin/python3 /root/mirae-app/api.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mirae-api
+
+# 성능 최적화
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# 보안 설정
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/root/mirae-app /tmp
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

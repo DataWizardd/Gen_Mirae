@@ -26,7 +26,7 @@ def get_db_connection():
 
 def get_combined_documents(ticker: str, limit: int = 50) -> pd.DataFrame:
     """주어진 티커에 대해 뉴스, 레딧, SEC 공시 문서를 최신순으로 가져옵니다."""
-    # 각 소스에서 가져올 데이터 수를 분배합니다.
+    # 각 소스에서 가져올 데이터 수를 분배.
     limit_per_source = limit // 3
 
     query = f"""
