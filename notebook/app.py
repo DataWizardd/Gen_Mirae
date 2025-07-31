@@ -10,7 +10,7 @@ import re
 
 from langchain_naver import ChatClovaX
 from langchain_community.tools.tavily_search import TavilySearchResults
-from clova_config import MODEL_PARAMS
+from config.clova_config import MODEL_PARAMS
 from agent.agents import StructuredAgent, UnstructuredAgent, WebAgent, Orchestrator
 
 # ------------------------------------------------------------------------------

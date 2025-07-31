@@ -6,7 +6,7 @@ from typing import Dict, List, Any
 from langchain_naver import ChatClovaX
 from langchain.prompts import PromptTemplate
 from langchain.schema import StrOutputParser
-from clova_config import MODEL_PARAMS
+from config.clova_config import MODEL_PARAMS
 
 from agent import data_retrieval, pdf_generator
 
