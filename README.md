@@ -168,4 +168,4 @@ python deploy.py --server-ip YOUR_SERVER_IP --server-user root
 
 프로젝트 관련 문의: [james4327@gmail.com](mailto:james4327@gmail.com)
 
-프로젝트 링크: [https://github.com/your-username/Gen_Mirae](https://github.com/datawizardd/Gen_Mirae)
+프로젝트 링크: [https://github.com/Datawizardd/Gen_Mirae](https://github.com/datawizardd/Gen_Mirae)
