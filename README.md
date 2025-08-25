@@ -1,5 +1,6 @@
-<<<<<<< HEAD
 # 📊 Mirae 투자 포트폴리오 AI 애널리스트
+
+<img width="457" height="608" alt="image" src="https://github.com/user-attachments/assets/735dd787-bae7-4094-adc1-445fa7981080" />
 
 ## 🎯 프로젝트 개요
 
@@ -171,5 +172,5 @@ python deploy.py --server-ip YOUR_SERVER_IP --server-user root
 
 프로젝트 링크: [https://github.com/Datawizardd/Gen_Mirae](https://github.com/datawizardd/Gen_Mirae)
 =======
-<img width="457" height="608" alt="image" src="https://github.com/user-attachments/assets/735dd787-bae7-4094-adc1-445fa7981080" />
->>>>>>> 64261d804b74b4285f3af83f55380126be317b4a
+
+
