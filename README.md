@@ -1,6 +1,6 @@
-# 📊 Mirae 투자 포트폴리오 AI 애널리스트
+# 📊 Mirae Asset 나만의 AI 애널리스트
 
-<img width="457" height="608" alt="image" src="https://github.com/user-attachments/assets/735dd787-bae7-4094-adc1-445fa7981080" />
+<img width="100%" alt="Mirae 투자 포트폴리오 AI 애널리스트" src="https://github.com/user-attachments/assets/735dd787-bae7-4094-adc1-445fa7981080" />
 
 ## 🎯 프로젝트 개요
 
@@ -162,9 +162,6 @@ python deploy.py --server-ip YOUR_SERVER_IP --server-user root
 자세한 배포 가이드는 [`deployment/DEPLOYMENT_GUIDE.md`](deployment/DEPLOYMENT_GUIDE.md)를 참조하세요.
 
 
-## 📝 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 있습니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
 
 ## 📞 문의
 
