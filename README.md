@@ -4,13 +4,13 @@
 
 ### 📱 주요 화면들
 <div align="center">
-  <img width="200" alt="대시보드" src="https://github.com/user-attachments/assets/27bb3926-92eb-40f7-bc0f-87771511d2ed" />
+  <img width="250" alt="대시보드" src="https://github.com/user-attachments/assets/27bb3926-92eb-40f7-bc0f-87771511d2ed" />
   <br><br>
-  <img width="200" alt="인사이트" src="https://github.com/user-attachments/assets/d741ba0d-1407-4f99-b9c9-2efe4d85ba22" />
-  <img width="200" alt="리포트" src="https://github.com/user-attachments/assets/600abb12-7bb1-4eef-9f8d-7b36ba0a9ea3" />
+  <img width="250" alt="인사이트" src="https://github.com/user-attachments/assets/d741ba0d-1407-4f99-b9c9-2efe4d85ba22" />
+  <img width="250" alt="리포트" src="https://github.com/user-attachments/assets/600abb12-7bb1-4eef-9f8d-7b36ba0a9ea3" />
   <br><br>
-  <img width="200" alt="종목 발굴" src="https://github.com/user-attachments/assets/ea58d32d-bd6a-4e90-ab91-605327646dff" />
-  <img width="200" alt="ChatBot" src="https://github.com/user-attachments/assets/6c35253e-483c-441c-9847-eecab0fa0575" />
+  <img width="250" alt="종목 발굴" src="https://github.com/user-attachments/assets/ea58d32d-bd6a-4e90-ab91-605327646dff" />
+  <img width="250" alt="ChatBot" src="https://github.com/user-attachments/assets/6c35253e-483c-441c-9847-eecab0fa0575" />
 </div>
 
 ## 🎯 프로젝트 개요
