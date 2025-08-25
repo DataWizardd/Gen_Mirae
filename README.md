@@ -2,6 +2,15 @@
 
 <img width="400" alt="Mirae 투자 포트폴리오 AI 애널리스트" src="https://github.com/user-attachments/assets/735dd787-bae7-4094-adc1-445fa7981080" />
 
+### 📱 주요 화면들
+<div align="center">
+  <img width="379" height="813" alt="대시보드" src="https://github.com/user-attachments/assets/27bb3926-92eb-40f7-bc0f-87771511d2ed" />
+  <img width="365" height="803" alt="인사이트" src="https://github.com/user-attachments/assets/882ed97-6105-482d-9edf-26de98414619" />
+  <img width="373" height="810" alt="리포트" src="https://github.com/user-attachments/assets/600abb12-7bb1-4eef-9f8d-7b36ba0a9ea3" />
+  <img width="377" height="811" alt="종목 발굴" src="https://github.com/user-attachments/assets/ea58d32d-bd6a-4e90-ab91-605327646dff" />
+  <img width="374" height="807" alt="ChatBot" src="https://github.com/user-attachments/assets/6c35253e-483c-441c-9847-eecab0fa0575" />
+</div>
+
 ## 🎯 프로젝트 개요
 
 프로젝트 Gen_Mirae는 개인 투자자를 위한 AI 기반 투자 포트폴리오 분석 및 관리 시스템입니다. 다양한 데이터 소스에서 정보를 수집하고 AI를 활용하여 개인화된 투자 인사이트를 제공합니다.
