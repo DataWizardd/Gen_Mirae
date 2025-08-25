@@ -1,6 +1,6 @@
 # 📊 Mirae Asset 나만의 AI 애널리스트
 
-<img width="600" alt="Mirae 투자 포트폴리오 AI 애널리스트" src="https://github.com/user-attachments/assets/735dd787-bae7-4094-adc1-445fa7981080" />
+<img width="400" alt="Mirae 투자 포트폴리오 AI 애널리스트" src="https://github.com/user-attachments/assets/735dd787-bae7-4094-adc1-445fa7981080" />
 
 ## 🎯 프로젝트 개요
 
