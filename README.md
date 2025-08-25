@@ -172,13 +172,3 @@ python deploy.py --server-ip YOUR_SERVER_IP --server-user root
 
 자세한 배포 가이드는 [`deployment/DEPLOYMENT_GUIDE.md`](deployment/DEPLOYMENT_GUIDE.md)를 참조하세요.
 
-
-
-## 📞 문의
-
-프로젝트 관련 문의: [james4327@gmail.com](mailto:james4327@gmail.com)
-
-프로젝트 링크: [https://github.com/Datawizardd/Gen_Mirae](https://github.com/datawizardd/Gen_Mirae)
-=======
-
-
