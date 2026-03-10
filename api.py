@@ -9,8 +9,8 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import logging
 
+from agent.orchestrator import OrchestratorAgent
 from agent.report_agent import ReportAgent
-from agent.agents import Chatbot # 수정된 Chatbot 클래스 임포트
 
 # --- 로깅 설정 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -65,7 +65,6 @@ def read_root():
 
 @app.post("/stock-details")
 async def get_stock_details(request: StockDetailsRequest):
-    # ... (기존 코드와 동일) ...
     conn = psycopg2.connect(**db_params)
     cur = conn.cursor(cursor_factory=RealDictCursor)
     details = {}
@@ -89,9 +88,8 @@ async def get_stock_details(request: StockDetailsRequest):
 
 @app.post("/generate_report")
 async def generate_report_endpoint(request: ReportRequest):
-    # ... (기존 코드와 동일) ...
     try:
-        agent = ReportAgent(ticker=request.ticker)
+        agent = ReportAgent(ticker=request.ticker, report_type=request.report_type)
         report_data = agent.run()
         if not report_data or not report_data.get('sections'):
             raise HTTPException(status_code=404, detail=f"{request.ticker}에 대한 리포트를 생성할 수 없습니다. 데이터가 부족합니다.")
@@ -103,7 +101,6 @@ async def generate_report_endpoint(request: ReportRequest):
 
 @app.get("/reports/{file_name}")
 async def get_report_file(file_name: str):
-    # ... (기존 코드와 동일) ...
     file_path = os.path.join("/tmp", file_name)
     if os.path.exists(file_path):
         return FileResponse(file_path, media_type='application/pdf', filename=file_name)
@@ -112,13 +109,11 @@ async def get_report_file(file_name: str):
 @app.post("/chat")
 async def chat_with_ai_analyst(request: ChatRequest):
     try:
-        # Chatbot 인스턴스 생성 시 사용자 정보 전달
-        chatbot = Chatbot(
+        orchestrator = OrchestratorAgent(
             user_stocks=request.user_stocks,
             watchlist=request.watchlist
         )
-        # run 메소드에는 쿼리만 전달
-        response_data = chatbot.run(query=request.message)
+        response_data = orchestrator.run(query=request.message)
         return JSONResponse(content=response_data)
     except Exception as e:
         logging.error(f"Chat API error: {e}", exc_info=True)
