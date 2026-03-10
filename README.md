@@ -21,11 +21,14 @@
 
 ```
 Gen_Mirae/
-├── 📁 agent/                    # AI 에이전트 모듈
-│   ├── agents.py               # 주요 AI 에이전트들
-│   ├── data_retrieval.py       # 데이터 조회 로직
-│   ├── pdf_generator.py        # PDF 리포트 생성
-│   └── report_agent.py         # 리포트 생성 에이전트
+├── 📁 agent/                    # AI 멀티에이전트 시스템
+│   ├── base.py                # BaseAgent 추상 클래스 및 데이터 모델
+│   ├── tools.py               # 에이전트 도구(Tool) 레지스트리
+│   ├── orchestrator.py        # 오케스트레이터 (쿼리 분석 → 디스패치 → 종합)
+│   ├── specialists.py         # 전문 에이전트 (Price/News/Financial/Event)
+│   ├── report_agent.py        # 리포트 생성 에이전트
+│   ├── data_retrieval.py      # 데이터 조회 로직
+│   └── pdf_generator.py       # PDF 리포트 생성
 ├── 📁 collectors/              # 데이터 수집기들
 │   ├── edgar_collector.py      # SEC EDGAR 공시자료
 │   ├── news_collector.py       # 뉴스 데이터
@@ -68,11 +71,13 @@ Gen_Mirae/
 - **소셜 미디어**: Reddit 투자 커뮤니티 분석
 - **글로벌 이벤트**: GDELT 데이터를 통한 글로벌 이벤트 모니터링
 
-### 🤖 AI 분석
-- **포트폴리오 분석**: 개인화된 투자 포트폴리오 리스크 분석
-- **투자 추천**: AI 기반 투자 종목 추천
-- **시장 동향**: 실시간 시장 동향 분석
-- **리포트 생성**: 자동화된 투자 리포트 작성
+### 🤖 AI 멀티에이전트 분석
+- **OrchestratorAgent**: 사용자 쿼리를 LLM으로 분석하고, 전문 에이전트에게 작업 위임 후 결과 종합
+- **PriceAnalystAgent**: 주가 시계열 및 밸류에이션 전문 분석
+- **NewsAnalystAgent**: 뉴스 흐름 및 시장 여론 분석
+- **FinancialAnalystAgent**: 재무제표 및 SEC 공시 심층 분석
+- **EventAnalystAgent**: GDELT 기반 거시경제·지정학적 리스크 분석
+- **ReportAgent**: 전문 에이전트 협업 기반 종합 리포트 생성
 
 ### 💻 사용자 인터페이스
 - **React 대시보드**: 모던한 웹 인터페이스
